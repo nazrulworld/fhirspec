@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+# Distribution / packaging
+.Python
+.pytest_cache
+htmlcov
+dist
+.coverage
+coverage.xml
+.netlify
+log.txt
+# IDE
+.idea
+.vscode
+# MyPY
+.mypy_cache
+# Env
+venv
+env
+.env
