@@ -45,7 +45,10 @@ dev = [
     "autoflake",
     "flake8",
     "vulture",
-    "twine"
+    "json5"
+]
+toml = [
+	"pytoml"
 ]
 all = [
 	"pytest >=4.0.0",
@@ -56,7 +59,8 @@ all = [
     "autoflake",
     "flake8",
     "vulture",
-    "twine"
+    "pytoml",
+    "json5"
 ]
 
 [requires]

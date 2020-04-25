@@ -1,0 +1,161 @@
+{
+  "BASE_PATH": "./tests/static/HL7/FHIR/R4/4.0.1",
+  "CACHE_PATH": "downloads",
+  "CLASS_MAP": {
+	"Any": "Resource",
+	"Practitioner.role": "PractRole",
+	"boolean": "bool",
+	"integer": "int",
+	"positiveInt": "int",
+	"unsignedInt": "int",
+	"date": "FHIRDate",
+	"dateTime": "FHIRDate",
+	"instant": "FHIRDate",
+	"time": "FHIRDate",
+	"decimal": "float",
+	"string": "str",
+	"markdown": "str",
+	"id": "str",
+	"code": "str",
+	"uri": "str",
+	"url": "str",
+	"canonical": "str",
+	"oid": "str",
+	"uuid": "str",
+	"xhtml": "str",
+	"base64Binary": "str"
+  },
+  "REPLACE_MAP": {
+	"Reference": "FHIRReference"
+  },
+  "NATIVES": [
+	"bool",
+	"int",
+	"float",
+	"str",
+	"dict"
+  ],
+  "JSON_MAP": {
+	"str": "str",
+	"int": "int",
+	"bool": "bool",
+	"float": "float",
+	"FHIRDate": "str"
+  },
+  "JSON_MAP_DEFAULT": "dict",
+  "RESERVED_MAP": {
+	"for": "for_fhir",
+	"from": "from_fhir",
+	"class": "class_fhir",
+	"import": "import_fhir",
+	"global": "global_fhir",
+	"assert": "assert_fhir",
+	"except": "except_fhir"
+  },
+  "ENUM_MAP": {
+	"=": "eq",
+	"<": "lt",
+	"<=": "lte",
+	">": "gt",
+	">=": "gte",
+	"*": "max"
+  },
+  "ENUM_NAME_MAP": {
+	"http://hl7.org/fhir/contracttermsubtypecodes": "ContractTermSubtypeCodes",
+	"http://hl7.org/fhir/coverage-exception": "CoverageExceptionCodes",
+	"http://hl7.org/fhir/resource-type-link": "ResourceTypeLink"
+  },
+  "FHIR_BASE_URL": "http://hl7.org/fhir",
+  "CURRENT_RELEASE_NAME": "R4",
+  "PREVIOUS_RELEASES": [
+	"STU3"
+  ],
+  "SPECIFICATION_URL": "http://hl7.org/fhir/R4",
+  "TEMPLATE_DIRECTORY": "templates",
+  "WRITE_RESOURCES": false,
+  "RESOURCE_TARGET_DIRECTORY": "../fhir/resources",
+  "RESOURCE_FILE_NAME_PATTERN": "{}.py",
+  "RESOURCE_SOURCE_TEMPLATE": "template-resource.jinja2",
+  "CODE_SYSTEMS_SOURCE_TEMPLATE": null,
+  "CODE_SYSTEMS_TARGET_NAME": "codesystems.py",
+  "WRITE_FACTORY": true,
+  "FACTORY_SOURCE_TEMPLATE": "template-elementfactory.jinja2",
+  "FACTORY_TARGET_NAME": "../tmp/fhir/resources/fhirelementfactory.py",
+  "WRITE_DEPENDENCIES": false,
+  "DEPENDENCIES_SOURCE_TEMPLATE": "template-dependencies.json",
+  "DEPENDENCIES_TARGET_FILE_NAME": "./dependencies.json",
+  "WRITE_UNITTESTS": true,
+  "UNITTEST_SOURCE_TEMPLATE": "template-unittest.jinja2",
+  "UNITTEST_TARGET_DIRECTORY": "../tmp/fhir/resources/tests",
+  "UNITTEST_TARGET_FILE_NAME_PATTERN": "test_{}.py",
+  "UNITTEST_COPY_FILES": [
+	"templates/conftest.py",
+	"templates/fixtures.py"
+  ],
+  "UNITTEST_FORMAT_PATH_PREPARE": "{}",
+  "UNITTEST_FORMAT_PATH_KEY": "{}.{}",
+  "UNITTEST_FORMAT_PATH_INDEX": "{}[{}]",
+  "DEFAULT_BASES": {
+	"complex-type": "FHIRAbstractBase",
+	"resource": "FHIRAbstractResource"
+  },
+  "RESOURCE_MODULE_LOWERCASE": true,
+  "CAMELCASE_CLASSES": true,
+  "CAMELCASE_ENUMS": true,
+  "BACKBONE_CLASS_ADDS_PARENT": true,
+  "MANUAL_PROFILES": [
+	[
+	  "templates/fhirabstractbase.py",
+	  "fhirabstractbase",
+	  [
+		"boolean",
+		"string",
+		"base64Binary",
+		"code",
+		"id",
+		"decimal",
+		"integer",
+		"unsignedInt",
+		"positiveInt",
+		"uri",
+		"oid",
+		"uuid",
+		"canonical",
+		"url",
+		"markdown",
+		"FHIRAbstractBase"
+	  ]
+	],
+	[
+	  "templates/fhirabstractresource.py",
+	  "fhirabstractresource",
+	  [
+		"FHIRAbstractResource"
+	  ]
+	],
+	[
+	  "templates/fhirreference.py",
+	  "fhirreference",
+	  [
+		"FHIRReference"
+	  ]
+	],
+	[
+	  "templates/fhirdate.py",
+	  "fhirdate",
+	  [
+		"date",
+		"dateTime",
+		"instant",
+		"time"
+	  ]
+	],
+	[
+	  "templates/fhirsearch.py",
+	  "fhirsearch",
+	  [
+		"FHIRSearch"
+	  ]
+	]
+  ]
+}

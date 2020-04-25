@@ -6,16 +6,37 @@ from __future__ import annotations
 
 import datetime
 import enum
-import json
+import io
 import logging
 import os
 import pathlib
 import re
 import types
-import typing
+import importlib
+import inspect
+import json
+from ast import literal_eval
 from collections import defaultdict
-from typing import (Any, DefaultDict, Dict, Generic, ItemsView, Iterable, List,
-                    Optional, Sequence, Set, Tuple, TypeVar, Union)
+from http.client import HTTPResponse
+import mimetypes
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    Generic,
+    ItemsView,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
+from urllib.error import HTTPError
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 __version__ = "0.1.0"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -45,8 +66,10 @@ UNSUPPORTED_PROFILES = [r"SimpleQuantity"]
 
 # --*-- Types
 ConfigurationType = TypeVar("ConfigurationType")
+ConfigurationVariableType = TypeVar("ConfigurationVariableType")
 FHIRClassPropertyType = TypeVar("FHIRClassPropertyType")
 FHIRSpecType = TypeVar("FHIRSpecType")
+FHIRSpecWriterType = TypeVar("FHIRSpecWriterType")
 FHIRValueSetType = TypeVar("FHIRValueSetType")
 FHIRCodeSystemType = TypeVar("FHIRCodeSystemType")
 FHIRStructureDefinitionType = TypeVar("FHIRStructureDefinitionType")
@@ -69,6 +92,14 @@ FHIRUnitTestItemType = TypeVar("FHIRUnitTestItemType")
 
 
 # --*-- Classes
+class ConfigurationVariable(Generic[ConfigurationVariableType]):
+    """ """
+
+    name: str
+    required: bool
+    type_: Any
+
+
 class Configuration(Generic[ConfigurationType]):
     """Simple Configuration Class"""
 
@@ -76,13 +107,14 @@ class Configuration(Generic[ConfigurationType]):
     __storage__: DefaultDict[str, Any]
     __slots__ = ("__storage__", "_initialized")
 
-    def __init__(self, data_dict: Dict[str, Any]):
+    def __init__(self, data_dict: Dict[str, Any], path_variables: List[str] = None):
         """ """
         object.__setattr__(self, "__storage__", defaultdict())
         object.__setattr__(self, "_initialized", False)
         self.init(data_dict)
         object.__setattr__(self, "_initialized", True)
-        self.normalize_paths()
+        self.validate(["BASE_PATH"])
+        self.normalize_paths(path_variables)
 
     @classmethod
     def from_module(cls, mod: types.ModuleType) -> Configuration:
@@ -94,9 +126,16 @@ class Configuration(Generic[ConfigurationType]):
     def from_json_file(cls, file: pathlib.Path) -> Configuration:
         """ """
         assert file.is_file() and file.exists()
+        try:
+            # json5 supported
+            from json5 import load as j_load
+        except ImportError:
+            if file.suffix == ".json5":
+                raise
+            j_load = json.load
 
         with open(str(file), "r", encoding="utf-8") as fp:
-            data_dict = json.load(fp)
+            data_dict = j_load(fp)
             assert isinstance(data_dict, dict)
 
         return cls(data_dict)
@@ -124,6 +163,22 @@ class Configuration(Generic[ConfigurationType]):
                     data_dict[key] = values
         return cls(data_dict)
 
+    @classmethod
+    def from_cfg_file(cls, filepath: pathlib.Path):
+        """ """
+        assert filepath.is_file() and filepath.suffix in (".cfg", ".ini")
+
+    @classmethod
+    def from_toml_file(cls, filepath: pathlib.Path):
+        """ """
+        import pytoml as toml
+
+        assert filepath.is_file() and filepath.suffix == ".toml"
+        with open(str(filepath), "r", encoding="utf-8") as fp:
+            data = toml.load(fp)
+
+            return cls(data_dict=data)
+
     def init(self, data_dict: Dict[str, Any]) -> None:
         """ """
         init_ = object.__getattribute__(self, "_initialized")
@@ -139,7 +194,7 @@ class Configuration(Generic[ConfigurationType]):
 
         _add(data_dict.items())
 
-    def normalize_paths(self) -> None:
+    def normalize_paths(self, path_variables: List[str] = None) -> None:
         """ """
         init_ = object.__getattribute__(self, "_initialized")
         if init_ is False:
@@ -151,15 +206,18 @@ class Configuration(Generic[ConfigurationType]):
             base_path = resolve_path(base_path, None)
             storage["BASE_PATH"] = base_path
 
-        needed_paths = (
+        paths = [
             "CACHE_PATH",
             "RESOURCE_TARGET_DIRECTORY",
             "FACTORY_TARGET_NAME",
             "DEPENDENCIES_TARGET_FILE_NAME",
             "UNITTEST_TARGET_DIRECTORY",
             "UNITTEST_COPY_FILES",
-        )
-        for np in needed_paths:
+        ]
+        if path_variables is not None:
+            paths.extend(path_variables)
+
+        for np in paths:
             val = storage[np]
             if isinstance(val, list):
                 new_val = list()
@@ -181,6 +239,25 @@ class Configuration(Generic[ConfigurationType]):
             new_profiles.append((path, mod_name, values))
 
         storage["MANUAL_PROFILES"] = new_profiles
+
+    def validate(self, required_variables: List[str]) -> None:
+        """XXX: variable could include with value type(s) and required flag
+        """
+        missing: List[str] = list()
+        for v in required_variables:
+            if v not in self.__storage__:
+                missing.append(v)
+        if len(missing) > 0:
+            raise ValueError(f"{missing} variable(s) are missing!")
+
+    def as_dict(self) -> defaultdict:
+        """ """
+        init_ = object.__getattribute__(self, "_initialized")
+        if init_ is False:
+            raise ValueError("Instance has must be initialized!")
+
+        storage = object.__getattribute__(self, "__storage__")
+        return storage.copy()
 
     def __getitem__(self, item: str) -> Any:
         """ """
@@ -210,15 +287,40 @@ class FHIRSpec(Generic[FHIRSpecType]):
     """ The FHIR specification.
     """
 
-    def __init__(self, src_directory: pathlib.Path, settings: Configuration):
+    _finalized: bool
+
+    def __init__(self, settings: Configuration, src_directory: pathlib.Path = None):
         """
         :param src_directory:
         :param settings:
         """
-        self.definition_directory = src_directory / "definitions"
-        self.example_directory = src_directory / "examples_json"
+        self.validate_settings(settings)
+        self.definition_directory: pathlib.Path = getattr(
+            settings, "FHIR_DEFINITION_DIRECTORY", None
+        )
+        self.example_directory: pathlib.Path = getattr(
+            settings, "FHIR_EXAMPLE_DIRECTORY", None
+        )
+        version_info_file: pathlib.Path = getattr(
+            settings, "FHIR_VERSION_INFO_FILE", None
+        )
+        if (
+            self.definition_directory is None
+            or self.example_directory is None
+            or version_info_file is None
+        ) and src_directory is None:
+            raise ValueError("src_directory is value is required!")
+        if self.definition_directory is None:
+            assert src_directory
+            self.definition_directory = src_directory / "definitions"
+        if self.example_directory is None:
+            assert src_directory
+            self.example_directory = src_directory / "examples_json"
+        if version_info_file is None:
+            assert src_directory
+            version_info_file = src_directory / "version.info"
         self.settings = settings
-        self.info: FHIRVersionInfo = FHIRVersionInfo(self, src_directory)
+        self.info: FHIRVersionInfo = FHIRVersionInfo(self, version_info_file)
         # system-url: FHIRValueSet()
         self.valuesets: DefaultDict[str, FHIRValueSet] = defaultdict()
         # system-url: FHIRCodeSystem()
@@ -231,6 +333,61 @@ class FHIRSpec(Generic[FHIRSpecType]):
         self.prepare()
         self.read_profiles()
         self.finalize()
+
+    @staticmethod
+    def validate_settings(settings: Configuration):
+        """
+        :param settings:
+        :return:
+        """
+        required_variables = [
+            "CLASS_MAP",
+            "REPLACE_MAP",
+            "NATIVES",
+            "JSON_MAP",
+            "JSON_MAP_DEFAULT",
+            "RESERVED_MAP",
+            "ENUM_MAP",
+            "ENUM_NAME_MAP",
+            "FHIR_BASE_URL",
+            "CURRENT_RELEASE_NAME",
+            "DEFAULT_BASES",
+            "PREVIOUS_RELEASES",
+            "SPECIFICATION_URL",
+            "UNITTEST_FORMAT_PATH_PREPARE",
+            "TEMPLATE_DIRECTORY",
+            "RESOURCE_FILE_NAME_PATTERN",
+            "WRITE_RESOURCES",
+            "RESOURCE_TARGET_DIRECTORY",
+            "RESOURCE_SOURCE_TEMPLATE",
+            "CODE_SYSTEMS_SOURCE_TEMPLATE",
+            "CODE_SYSTEMS_TARGET_NAME",
+            "WRITE_FACTORY",
+            "UNITTEST_COPY_FILES",
+            "FACTORY_SOURCE_TEMPLATE",
+            "FACTORY_TARGET_NAME",
+            "WRITE_DEPENDENCIES",
+            "DEPENDENCIES_SOURCE_TEMPLATE",
+            "DEPENDENCIES_TARGET_FILE_NAME",
+            "WRITE_UNITTESTS",
+            "UNITTEST_SOURCE_TEMPLATE",
+            "UNITTEST_TARGET_DIRECTORY",
+            "UNITTEST_TARGET_FILE_NAME_PATTERN",
+            "UNITTEST_FORMAT_PATH_KEY",
+            "UNITTEST_FORMAT_PATH_INDEX",
+            "RESOURCE_MODULE_LOWERCASE",
+            "CAMELCASE_CLASSES",
+            "CAMELCASE_ENUMS",
+            "BACKBONE_CLASS_ADDS_PARENT",
+            "MANUAL_PROFILES",
+        ]
+        settings.validate(required_variables)
+
+        if (
+            settings.WRITE_RESOURCES is True
+            and getattr(settings, "RESOURCES_WRITER_CLASS", None) is None
+        ):
+            raise ValueError("Writer class is required, when resources to be written.")
 
     def prepare(self) -> None:
         """ Run actions before starting to parse profiles.
@@ -355,6 +512,11 @@ class FHIRSpec(Generic[FHIRSpecType]):
         """
         for key, prof in self.profiles.items():
             prof.finalize()
+        self._finalized = True
+
+    @property
+    def finalized(self):
+        return self._finalized
 
     # MARK: Naming Utilities
     def as_module_name(self, name: str) -> str:
@@ -364,7 +526,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
 
     def as_class_name(
         self, classname: str, parent_name: str = None
-    ) -> typing.Union[str, None]:
+    ) -> Union[str, None]:
         """
         :param classname:
         :param parent_name:
@@ -393,7 +555,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
 
     def class_name_for_type(
         self, type_name: str, parent_name: str = None
-    ) -> typing.Union[str, None]:
+    ) -> Union[str, None]:
         """
         :param type_name:
         :param parent_name:
@@ -401,9 +563,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
         """
         return self.as_class_name(type_name, parent_name)
 
-    def class_name_for_type_if_property(
-        self, type_name: str
-    ) -> typing.Union[str, None]:
+    def class_name_for_type_if_property(self, type_name: str) -> Union[str, None]:
         """
         :param type_name:
         :return: str | None
@@ -471,7 +631,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
 
     # MARK: Unit Tests
     def parse_unit_tests(self) -> None:
-        controller:FHIRUnitTestController = FHIRUnitTestController(self)
+        controller: FHIRUnitTestController = FHIRUnitTestController(self)
         controller.find_and_parse_tests(self.example_directory)
         self.unit_tests = controller.collections
 
@@ -485,6 +645,22 @@ class FHIRSpec(Generic[FHIRSpecType]):
                 profiles.append(profile)
         return profiles
 
+    def write(self):
+        """ """
+        klass = self.settings.RESOURCES_WRITER_CLASS
+        if isinstance(klass, str):
+            parts = klass.split(".")
+            assert len(parts) > 1
+            klass_name = parts[-1]
+            module_name = ".".join(parts[:-1])
+            factory = getattr(importlib.import_module(module_name), klass_name)
+        else:
+            factory = klass
+        assert inspect.isclass(factory)
+        assert issubclass(factory, FHIRSpecWriter)
+
+        writer = factory(self)
+        return writer.write()
     # def write(self):
     #     """Should be individual method"""
     #     if self.settings.WRITE_RESOURCES:
@@ -508,11 +684,28 @@ class FHIRSpec(Generic[FHIRSpecType]):
     #         renderer.render()
 
 
-class FHIRVersionInfo(typing.Generic[FHIRVersionInfoType]):
+class FHIRSpecWriter(Generic[FHIRSpecWriterType]):
+    """ """
+
+    def __init__(self, spec: FHIRSpec):
+        """ """
+        if spec.finalized is not True:
+            raise ValueError(
+                "Specification must be in finalized state, ready to write."
+            )
+        self.spec = spec
+        self.settings = spec.settings
+
+    def write(self):
+        """ """
+        raise NotImplementedError
+
+
+class FHIRVersionInfo(Generic[FHIRVersionInfoType]):
     """ The version of a FHIR specification.
     """
 
-    def __init__(self, spec: FHIRSpec, directory: pathlib.Path):
+    def __init__(self, spec: FHIRSpec, info_file: pathlib.Path):
         self.spec = spec
 
         now = datetime.date.today()
@@ -523,7 +716,6 @@ class FHIRVersionInfo(typing.Generic[FHIRVersionInfoType]):
         self.version_raw: Optional[str] = None
         self.build: Optional[str] = None
         self.revision: Optional[str] = None
-        info_file = directory / "version.info"
         self.read_version(info_file)
 
     def read_version(self, filepath: pathlib.Path) -> None:
@@ -554,10 +746,10 @@ class FHIRValueSet(Generic[FHIRValueSetType]):
         """
         self.spec = spec
         self.definition = set_dict
-        self._enum: Dict[str, typing.Union[str, None, List]] = dict()
+        self._enum: Dict[str, Union[str, None, List]] = dict()
 
     @property
-    def enum(self) -> Union[None, Dict[str, typing.Union[str, List[str], None]]]:
+    def enum(self) -> Union[None, Dict[str, Union[str, List[str], None]]]:
         """ Returns FHIRCodeSystem if this valueset can be represented by one.
         """
         if len(self._enum) > 0:
@@ -643,9 +835,7 @@ class FHIRCodeSystem(Generic[FHIRCodeSystemType]):
         self.codes = self.parsed_codes(concepts)
 
     def parsed_codes(
-        self,
-        codes: Sequence[Dict[str, Any]],
-        prefix: Optional[str] = None,
+        self, codes: Sequence[Dict[str, Any]], prefix: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         :param codes:
@@ -681,28 +871,26 @@ class FHIRCodeSystem(Generic[FHIRCodeSystemType]):
         return found
 
 
-class FHIRStructureDefinition(typing.Generic[FHIRStructureDefinitionType]):
+class FHIRStructureDefinition(Generic[FHIRStructureDefinitionType]):
     """ One FHIR structure definition.
     """
 
-    def __init__(
-        self, spec: FHIRSpec, profile: typing.Optional[typing.Dict[str, typing.Any]]
-    ):
+    def __init__(self, spec: FHIRSpec, profile: Optional[Dict[str, Any]]):
         self.is_manual: bool = False
         # FHIRStructureDefinitionStructure()
         self.structure: FHIRStructureDefinitionStructure
         self.spec: FHIRSpec = spec
-        self.url: typing.Optional[str] = None
-        self.targetname: typing.Optional[str] = None
+        self.url: Optional[str] = None
+        self.targetname: Optional[str] = None
         # List of FHIRStructureDefinitionElement
-        self.elements: typing.List[FHIRStructureDefinitionElement] = list()
+        self.elements: List[FHIRStructureDefinitionElement] = list()
         self.main_element: Optional[FHIRStructureDefinitionElement] = None
         # xxx: if ._class_map is required
-        # self._class_map: typing.Dict[str, str] = dict()
-        self.classes: typing.List[FHIRClass] = list()
+        # self._class_map: Dict[str, str] = dict()
+        self.classes: List[FHIRClass] = list()
         self._did_finalize: bool = False
-        self.fhir_version: typing.Optional[str] = None
-        self.fhir_last_updated: typing.Optional[str] = None
+        self.fhir_version: Optional[str] = None
+        self.fhir_last_updated: Optional[str] = None
 
         if profile is not None:
             self.parse_profile(profile)
@@ -731,9 +919,7 @@ class FHIRStructureDefinition(typing.Generic[FHIRStructureDefinitionType]):
         self.fhir_version = profile.get("fhirVersion")
         self.fhir_last_updated = profile.get("meta", {}).get("lastUpdated")
         LOGGER.info('Parsing profile "{}"'.format(profile.get("name")))
-        self.structure = FHIRStructureDefinitionStructure(
-            self, profile
-        )
+        self.structure = FHIRStructureDefinitionStructure(self, profile)
 
     def process_profile(self) -> None:
         """ Extract all elements and create classes.
@@ -787,7 +973,9 @@ class FHIRStructureDefinition(typing.Generic[FHIRStructureDefinitionType]):
                     self.found_class(sub)
             self.targetname = snap_class.name
 
-    def element_with_id(self, ident: str) -> Union[FHIRStructureDefinitionElement, None]:
+    def element_with_id(
+        self, ident: str
+    ) -> Union[FHIRStructureDefinitionElement, None]:
         """ Returns a FHIRStructureDefinitionElementDefinition with the given
         id, if found. Used to retrieve elements defined via `contentReference`.
         """
@@ -884,8 +1072,7 @@ class FHIRStructureDefinition(typing.Generic[FHIRStructureDefinitionType]):
 
         # assign all super-classes as objects
         for cls in self.classes:
-            if cls.superclass is None:
-                assert cls.superclass_name is not None
+            if cls.superclass is None and cls.superclass_name is not None:
                 super_cls = FHIRClass.with_name(cls.superclass_name)
                 if super_cls is None and cls.superclass_name is not None:
                     raise Exception(
@@ -899,24 +1086,18 @@ class FHIRStructureDefinition(typing.Generic[FHIRStructureDefinitionType]):
         self._did_finalize = True
 
 
-class FHIRStructureDefinitionStructure(
-    typing.Generic[FHIRStructureDefinitionStructureType]
-):
+class FHIRStructureDefinitionStructure(Generic[FHIRStructureDefinitionStructureType]):
     """ The actual structure of a complete profile.
     """
 
-    def __init__(
-        self,
-        profile: FHIRStructureDefinition,
-        profile_dict: typing.Dict[str, typing.Any],
-    ):
+    def __init__(self, profile: FHIRStructureDefinition, profile_dict: Dict[str, Any]):
         self.profile: FHIRStructureDefinition = profile
-        self.name: Optional[str]  = None
+        self.name: Optional[str] = None
         self.base: Optional[str] = None
         self.kind: Optional[str] = None
         self.subclass_of: Optional[str] = None
-        self.snapshot: typing.List[typing.Dict[str, typing.Any]] = list()
-        self.differential: typing.List[typing.Dict[str, typing.Any]] = list()
+        self.snapshot: List[Dict[str, Any]] = list()
+        self.differential: List[Dict[str, Any]] = list()
 
         self.parse_from(profile_dict)
 
@@ -941,31 +1122,25 @@ class FHIRStructureDefinitionStructure(
             self.differential = json_dict["differential"].get("element", [])
 
 
-class FHIRStructureDefinitionElement(
-    typing.Generic[FHIRStructureDefinitionElementType]
-):
+class FHIRStructureDefinitionElement(Generic[FHIRStructureDefinitionElementType]):
     """ An element in a profile's structure.
     """
 
     def __init__(
         self,
         profile: FHIRStructureDefinition,
-        element_dict: typing.Dict[str, typing.Any],
+        element_dict: Dict[str, Any],
         is_main_profile_element: bool = False,
     ):
         assert isinstance(profile, FHIRStructureDefinition)
         self.profile: FHIRStructureDefinition = profile
-        self.path: typing.Optional[str] = None
-        self.parent: typing.Optional[FHIRStructureDefinitionElement] = None
-        self.children: typing.Optional[
-            typing.List[FHIRStructureDefinitionElement]
-        ] = None
-        self.parent_name: typing.Optional[str] = None
-        self.definition: typing.Optional[
-            FHIRStructureDefinitionElementDefinition
-        ] = None
-        self.n_min: typing.Optional[int] = None
-        self.n_max: typing.Optional[str] = None
+        self.path: Optional[str] = None
+        self.parent: Optional[FHIRStructureDefinitionElement] = None
+        self.children: Optional[List[FHIRStructureDefinitionElement]] = None
+        self.parent_name: Optional[str] = None
+        self.definition: Optional[FHIRStructureDefinitionElementDefinition] = None
+        self.n_min: Optional[int] = None
+        self.n_max: Optional[str] = None
         self.is_summary: bool = False
         # to mark conflicts,
         # see #13215 (http://gforge.hl7.org/gf/project/fhir/tracker/
@@ -978,7 +1153,7 @@ class FHIRStructureDefinitionElement(
         self.is_main_profile_element: bool = is_main_profile_element
         self.represents_class: bool = False
 
-        self._superclass_name: typing.Optional[str] = None
+        self._superclass_name: Optional[str] = None
         self._did_resolve_dependencies: bool = False
 
         if element_dict is not None:
@@ -986,7 +1161,7 @@ class FHIRStructureDefinitionElement(
         else:
             self.definition = FHIRStructureDefinitionElementDefinition(self, None)
 
-    def parse_from(self, element_dict: typing.Dict[str, typing.Any]) -> None:
+    def parse_from(self, element_dict: Dict[str, Any]) -> None:
         """
         :param element_dict:
         :return:
@@ -1035,9 +1210,7 @@ class FHIRStructureDefinitionElement(
 
     def create_class(
         self, module: str = None
-    ) -> Tuple[
-        Union[FHIRClass, None], Union[None, Sequence[FHIRClass]]
-    ]:
+    ) -> Tuple[Union[FHIRClass, None], Union[None, Sequence[FHIRClass]]]:
         """ Creates a FHIRClass instance from the receiver, returning the
         created class as the first and all inline defined subclasses as the
         second item in the tuple.
@@ -1075,7 +1248,7 @@ class FHIRStructureDefinitionElement(
 
         return cls, subs
 
-    def as_properties(self) -> Union[List[FHIRClassProperty],None]:
+    def as_properties(self) -> Union[List[FHIRClassProperty], None]:
         """ If the element describes a *class property*, returns a list of
         FHIRClassProperty instances, None otherwise.
         """
@@ -1128,12 +1301,12 @@ class FHIRStructureDefinitionElement(
 
     def name_if_class(self) -> str:
         assert self.definition
-        name =  self.definition.name_if_class()
+        name = self.definition.name_if_class()
         assert isinstance(name, str)
         return name
 
     @property
-    def superclass_name(self) -> typing.Optional[str]:
+    def superclass_name(self) -> Optional[str]:
         """ Determine the superclass for the element (used for class elements).
         """
         if self._superclass_name is None:
@@ -1144,7 +1317,7 @@ class FHIRStructureDefinitionElement(
                     "Have more than one type to determine superclass "
                     f'in "{self.path}": "{tps}"'
                 )
-            type_code: typing.Optional[str] = None
+            type_code: Optional[str] = None
 
             if (
                 self.is_main_profile_element
@@ -1164,7 +1337,7 @@ class FHIRStructureDefinitionElement(
 
 
 class FHIRStructureDefinitionElementDefinition(
-    typing.Generic[FHIRStructureDefinitionElementDefinitionType]
+    Generic[FHIRStructureDefinitionElementDefinitionType]
 ):
     """ The definition of a FHIR element.
     """
@@ -1172,7 +1345,7 @@ class FHIRStructureDefinitionElementDefinition(
     def __init__(
         self,
         element: FHIRStructureDefinitionElement,
-        definition_dict: Optional[Dict[str, typing.Any]] = None,
+        definition_dict: Optional[Dict[str, Any]] = None,
     ):
         self.id: str
         self.element: FHIRStructureDefinitionElement = element
@@ -1197,8 +1370,8 @@ class FHIRStructureDefinitionElementDefinition(
         if definition_dict is not None:
             self.parse_from(definition_dict)
 
-    def parse_from(self, definition_dict: typing.Dict[str, Any]) -> None:
-        self.id = definition_dict["id"]
+    def parse_from(self, definition_dict: Dict[str, Any]) -> None:
+        self.id = definition_dict.get("id")
 
         self.types = []
         for type_dict in definition_dict.get("type", []):
@@ -1262,7 +1435,7 @@ class FHIRStructureDefinitionElementDefinition(
                 self.element.valueset = valueset
                 self.element.enum = valueset.enum
 
-    def name_if_class(self) -> typing.Union[str, None]:
+    def name_if_class(self) -> Union[str, None]:
         """ Determines the class-name that the element would have if it was
         defining a class. This means it uses "name", if present, and the last
         "path" component otherwise.
@@ -1301,9 +1474,7 @@ class FHIRElementType(Generic[FHIRElementTypeType]):
             self.parse_from(type_dict)
 
     @staticmethod
-    def parse_extension(
-        type_dict: Dict[str, typing.Any]
-    ) -> Union[Dict[str, Any], None]:
+    def parse_extension(type_dict: Dict[str, Any]) -> Union[Dict[str, Any], None]:
         """ """
         extensions = []
         urls = [
@@ -1330,9 +1501,7 @@ class FHIRElementType(Generic[FHIRElementTypeType]):
         return None
 
     @staticmethod
-    def parse_target_profile(
-        type_dict: Dict[str, Any]
-    ) -> Union[List[str], None]:
+    def parse_target_profile(type_dict: Dict[str, Any]) -> Union[List[str], None]:
         """ """
         profile = type_dict.get("targetProfile", None)
         if profile is None:
@@ -1380,44 +1549,44 @@ class FHIRElementType(Generic[FHIRElementTypeType]):
             self.profile = profile
 
 
-class FHIRElementBinding(typing.Generic[FHIRElementBindingType]):
+class FHIRElementBinding(Generic[FHIRElementBindingType]):
     """ The "binding" element in an element definition
     """
 
-    def __init__(self, binding_obj: typing.Dict[str, typing.Any]):
-        self.strength: typing.Optional[str] = binding_obj.get("strength")
-        self.description: typing.Optional[str] = binding_obj.get("description")
-        self.uri: typing.Optional[str] = binding_obj.get("valueSetUri")
-        self.canonical: typing.Optional[str] = binding_obj.get("valueSetCanonical")
+    def __init__(self, binding_obj: Dict[str, Any]):
+        self.strength: Optional[str] = binding_obj.get("strength")
+        self.description: Optional[str] = binding_obj.get("description")
+        self.uri: Optional[str] = binding_obj.get("valueSetUri")
+        self.canonical: Optional[str] = binding_obj.get("valueSetCanonical")
         self.is_required: bool = "required" == self.strength
 
 
-class FHIRElementConstraint(typing.Generic[FHIRElementConstraintType]):
+class FHIRElementConstraint(Generic[FHIRElementConstraintType]):
     """ Constraint on an element.
     """
 
-    def __init__(self, constraint_arr: typing.Dict[str, typing.Any]):
+    def __init__(self, constraint_arr: Dict[str, Any]):
         pass
 
 
-class FHIRElementMapping(typing.Generic[FHIRElementMappingType]):
+class FHIRElementMapping(Generic[FHIRElementMappingType]):
     """ Mapping FHIR to other standards.
     """
 
-    def __init__(self, mapping_arr: typing.Dict[str, typing.Any]):
+    def __init__(self, mapping_arr: Dict[str, Any]):
         pass
 
 
-class FHIRClass(typing.Generic[FHIRClassType]):
+class FHIRClass(Generic[FHIRClassType]):
     """ An element/resource that should become its own class.
     """
 
-    known: typing.DefaultDict[str, FHIRClass] = defaultdict()
+    known: DefaultDict[str, FHIRClass] = defaultdict()
 
     @classmethod
     def for_element(
         cls, element: FHIRStructureDefinitionElement
-    ) -> typing.Tuple[FHIRClass, bool]:
+    ) -> Tuple[FHIRClass, bool]:
         """ Returns an existing class or creates one for the given element.
         Returns a tuple with the class and a bool indicating creation.
         """
@@ -1444,17 +1613,15 @@ class FHIRClass(typing.Generic[FHIRClassType]):
         assert element.represents_class
         self.path: Optional[str] = element.path
         self.name: str = element.name_if_class()
-        self.module: typing.Optional[str] = None
+        self.module: Optional[str] = None
         self.resource_type: str = element.name_of_resource()
-        self.superclass: typing.Optional[FHIRClass] = None
+        self.superclass: Optional[FHIRClass] = None
         self.superclass_name: Optional[str] = element.superclass_name
         if element.definition:
             self.short: Optional[str] = element.definition.short
             self.formal: Optional[str] = element.definition.formal
-        self.properties: typing.List[FHIRClassProperty] = list()
-        self.expanded_nonoptionals: typing.Dict[
-            str, typing.List[FHIRClassProperty]
-        ] = dict()
+        self.properties: List[FHIRClassProperty] = list()
+        self.expanded_nonoptionals: Dict[str, List[FHIRClassProperty]] = dict()
 
     def add_property(self, prop: FHIRClassProperty) -> None:
         """ Add a property to the receiver.
@@ -1488,7 +1655,7 @@ class FHIRClass(typing.Generic[FHIRClassType]):
                 self.expanded_nonoptionals[prop.one_of_many] = [prop]
 
     @property
-    def nonexpanded_properties(self) -> typing.List[FHIRClassProperty]:
+    def nonexpanded_properties(self) -> List[FHIRClassProperty]:
         nonexpanded = []
         included = set()
         for prop in self.properties:
@@ -1500,7 +1667,7 @@ class FHIRClass(typing.Generic[FHIRClassType]):
         return nonexpanded
 
     @property
-    def nonexpanded_nonoptionals(self) -> typing.List[FHIRClassProperty]:
+    def nonexpanded_nonoptionals(self) -> List[FHIRClassProperty]:
         nonexpanded = []
         included = set()
         for prop in self.properties:
@@ -1513,7 +1680,7 @@ class FHIRClass(typing.Generic[FHIRClassType]):
             nonexpanded.append(prop)
         return nonexpanded
 
-    def property_for(self, prop_name: str) -> typing.Union[FHIRClassProperty, None]:
+    def property_for(self, prop_name: str) -> Union[FHIRClassProperty, None]:
         """
         :param prop_name:
         :return:
@@ -1540,9 +1707,7 @@ class FHIRClass(typing.Generic[FHIRClassType]):
         return False
 
     @property
-    def sorted_nonoptionals(
-        self
-    ) -> typing.List[typing.Tuple[str, List[FHIRClassProperty]]]:
+    def sorted_nonoptionals(self,) -> List[Tuple[str, List[FHIRClassProperty]]]:
         return sorted(self.expanded_nonoptionals.items())
 
 
@@ -1562,13 +1727,13 @@ class FHIRClassProperty(Generic[FHIRClassPropertyType]):
 
         self.path = element.path
         # assign if this property has been expanded from "property[x]"
-        self.one_of_many: typing.Optional[str] = None
+        self.one_of_many: Optional[str] = None
 
         if not type_name:
             type_name = type_obj.code
         self.type_name = type_name
 
-        name = (element.definition and element.definition.prop_name or None)
+        name = element.definition and element.definition.prop_name or None
         assert isinstance(name, str)
         if "[x]" in name:
             self.one_of_many = name.replace("[x]", "")
@@ -1581,7 +1746,7 @@ class FHIRClassProperty(Generic[FHIRClassPropertyType]):
         self.class_name: Optional[str] = spec.class_name_for_type_if_property(type_name)
         self.enum = element.enum if "code" == type_name else None
         # should only be set if it's an external module (think Python)
-        self.module_name: typing.Optional[str] = None
+        self.module_name: Optional[str] = None
         assert isinstance(self.class_name, str)
         self.json_class: str = spec.json_class_for_class_name(self.class_name)
         self.is_native: bool = (
@@ -1604,15 +1769,17 @@ class FHIRClassProperty(Generic[FHIRClassPropertyType]):
         if element.definition:
             self.short: Optional[str] = element.definition.short
             self.formal: Optional[str] = element.definition.formal
-            self.representation: Optional[Sequence[str]] = element.definition.representation
+            self.representation: Optional[
+                Sequence[str]
+            ] = element.definition.representation
 
 
-class FHIRResourceFile(typing.Generic[FHIRResourceFileType]):
+class FHIRResourceFile(Generic[FHIRResourceFileType]):
     """ A FHIR example resource file.
     """
 
     @classmethod
-    def find_all(cls, directory: pathlib.Path) -> typing.List[FHIRResourceFile]:
+    def find_all(cls, directory: pathlib.Path) -> List[FHIRResourceFile]:
         """ Finds all example JSON files in the given directory.
         """
 
@@ -1639,10 +1806,10 @@ class FHIRResourceFile(typing.Generic[FHIRResourceFileType]):
 
     def __init__(self, filepath: pathlib.Path):
         self.filepath = filepath
-        self._content: typing.Optional[typing.Dict[str, typing.Any]] = None
+        self._content: Optional[Dict[str, Any]] = None
 
     @property
-    def content(self) -> typing.Dict[str, typing.Any]:
+    def content(self) -> Dict[str, Any]:
         """ Process the unit test file, determining class structure
         from the given classes dict.
 
@@ -1659,7 +1826,7 @@ class FHIRResourceFile(typing.Generic[FHIRResourceFileType]):
         return self._content
 
 
-class FHIRUnitTestController(typing.Generic[FHIRUnitTestControllerType]):
+class FHIRUnitTestController(Generic[FHIRUnitTestControllerType]):
     """ Can create unit tests from example files.
     """
 
@@ -1670,8 +1837,8 @@ class FHIRUnitTestController(typing.Generic[FHIRUnitTestControllerType]):
         """
         self.spec = spec
         self.settings = settings or spec.settings
-        self.files: typing.List[FHIRResourceFile] = list()
-        self.collections: typing.List[FHIRUnitTestCollection] = list()
+        self.files: List[FHIRResourceFile] = list()
+        self.collections: List[FHIRUnitTestCollection] = list()
 
     def find_and_parse_tests(self, directory: pathlib.Path) -> None:
         """
@@ -1688,7 +1855,7 @@ class FHIRUnitTestController(typing.Generic[FHIRUnitTestControllerType]):
                 tests.append(test)
 
         # collect per class
-        collections: typing.Dict[str, FHIRUnitTestCollection] = {}
+        collections: Dict[str, FHIRUnitTestCollection] = {}
         for test in tests:
             coll = collections.get(test.klass.name)
             if coll is None:
@@ -1701,7 +1868,7 @@ class FHIRUnitTestController(typing.Generic[FHIRUnitTestControllerType]):
     # MARK: Utilities
     def unittest_for_resource(
         self, resource: FHIRResourceFile
-    ) -> typing.Union[FHIRUnitTest, None]:
+    ) -> Union[FHIRUnitTest, None]:
         """ Returns a FHIRUnitTest instance or None for the given resource,
         depending on if the class to be tested is known.
         """
@@ -1924,3 +2091,86 @@ def resolve_path(string_path: str, parent: pathlib.Path = None) -> pathlib.Path:
         else:
             me = me / part
     return me
+
+
+# --*-- Public Utilities Functions
+def is_text_content(response: HTTPResponse) -> bool:
+    """
+    :param response:
+    :return: bool
+    """
+    content_type = response.headers.get("Content-Type", "").split(";")[0]
+    if content_type == "":
+        raise NotImplementedError
+    content_type = content_type.strip().lower()
+    if content_type.startswith("text/"):
+        return True
+    elif content_type.startswith("application/"):
+        ext = mimetypes.guess_extension(content_type, strict=True)
+        if ext in (".js", ".json", ".mjs"):
+            return True
+
+    return False
+
+
+def filename_from_response(response: HTTPResponse) -> str:
+    """ """
+
+    def _from_url(url: str) -> str:
+        path_ = urlparse(url).path
+        if path_ in ("", "/"):
+            c_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip()
+            ext = mimetypes.guess_extension(c_type.lower(), strict=True)
+            if ext is None:
+                ext = ".html"
+            return "index" + ext
+        return pathlib.Path(path_).name
+
+    if is_text_content(response):
+        return _from_url(response.geturl())
+    file_info = response.headers.get("Content-Disposition", "")
+    for part in file_info.split(";"):
+        part_ = part.strip()
+        if not part_:
+            continue
+        if part_.lower().startswith("filename="):
+            filename = part_.split("=", 1)[1].strip()
+            try:
+                # try escape " or '
+                filename = literal_eval(filename)
+            except ValueError:
+                # It's OK
+                pass
+            return filename
+    # always fall-back
+    return _from_url(response.geturl())
+
+
+def write_response_stream(
+    output_dir: pathlib.Path, response: HTTPResponse
+) -> pathlib.Path:
+    """ """
+    filename = filename_from_response(response)
+    output = output_dir / filename
+    mode = is_text_content(response) and "w" or "wb"
+    with io.open(str(output), mode) as fp:
+        while not response.closed:
+            chunk = response.read(io.DEFAULT_BUFFER_SIZE)
+            if not chunk:
+                break
+            fp.write(mode == "wb" and chunk or chunk.decode())
+    return output
+
+
+def download(url: str, download_directory: pathlib.Path) -> pathlib.Path:
+    """ """
+    request = Request(url=url, method="GET", unverifiable=False)
+    response: HTTPResponse
+    try:
+        response = urlopen(request)
+        assert response.status == 200
+    except HTTPError:
+        # xxx: handle nicely later
+        raise
+
+    return write_response_stream(output_dir=download_directory, response=response)
