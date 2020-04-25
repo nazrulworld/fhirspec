@@ -259,6 +259,17 @@ class Configuration(Generic[ConfigurationType]):
         storage = object.__getattribute__(self, "__storage__")
         return storage.copy()
 
+    def update(self, data_dict: Dict[str, Any]) -> None:
+        """ """
+        init_ = object.__getattribute__(self, "_initialized")
+        if init_ is False:
+            raise ValueError("Instance has must be initialized!")
+
+        storage = object.__getattribute__(self, "__storage__")
+        for key, val in data_dict.items():
+            if key.isupper():
+                storage[key] = val
+
     def __getitem__(self, item: str) -> Any:
         """ """
         try:
@@ -510,8 +521,13 @@ class FHIRSpec(Generic[FHIRSpecType]):
         to perform additional actions, like looking up class implementations
         from different profiles.
         """
+        if self._finalized is True:
+            raise ValueError("Specification is already been finalized!")
         for key, prof in self.profiles.items():
             prof.finalize()
+
+        if self.settings.WRITE_UNITTESTS:
+            self.parse_unit_tests()
         self._finalized = True
 
     @property
@@ -661,27 +677,6 @@ class FHIRSpec(Generic[FHIRSpecType]):
 
         writer = factory(self)
         return writer.write()
-    # def write(self):
-    #     """Should be individual method"""
-    #     if self.settings.WRITE_RESOURCES:
-    #         renderer = FHIRStructureDefinitionRenderer(self, self.settings)
-    #         renderer.render()
-    #
-    #         vsrenderer = fhirrenderer.FHIRValueSetRenderer(self, self.settings)
-    #         vsrenderer.render()
-    #
-    #     if self.settings.WRITE_FACTORY:
-    #         renderer = fhirrenderer.FHIRFactoryRenderer(self, self.settings)
-    #         renderer.render()
-    #
-    #     if self.settings.WRITE_DEPENDENCIES:
-    #         renderer = fhirrenderer.FHIRDependencyRenderer(self, self.settings)
-    #         renderer.render()
-    #
-    #     if self.settings.WRITE_UNITTESTS:
-    #         self.parse_unit_tests()
-    #         renderer = fhirrenderer.FHIRUnitTestRenderer(self, self.settings)
-    #         renderer.render()
 
 
 class FHIRSpecWriter(Generic[FHIRSpecWriterType]):

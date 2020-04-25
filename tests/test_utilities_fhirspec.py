@@ -6,9 +6,11 @@ import pathlib
 import pytest
 
 
-def test_configuration():
+def test_configuration_from_module():
     """ """
-    assert 1 == 1
+    from . import baseconfig
+    config = fhirspec.Configuration.from_module(baseconfig)
+    assert config.BASE_PATH == baseconfig.BASE_PATH
 
 
 @pytest.mark.skipif(1 == 2, reason="Only runs in Travis Environment.")
