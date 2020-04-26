@@ -6,19 +6,19 @@ from __future__ import annotations
 
 import datetime
 import enum
+import importlib
+import inspect
 import io
+import json
 import logging
+import mimetypes
 import os
 import pathlib
 import re
 import types
-import importlib
-import inspect
-import json
 from ast import literal_eval
 from collections import defaultdict
 from http.client import HTTPResponse
-import mimetypes
 from typing import (
     Any,
     DefaultDict,
@@ -164,12 +164,12 @@ class Configuration(Generic[ConfigurationType]):
         return cls(data_dict)
 
     @classmethod
-    def from_cfg_file(cls, filepath: pathlib.Path):
+    def from_cfg_file(cls, filepath: pathlib.Path) -> None:
         """ """
         assert filepath.is_file() and filepath.suffix in (".cfg", ".ini")
 
     @classmethod
-    def from_toml_file(cls, filepath: pathlib.Path):
+    def from_toml_file(cls, filepath: pathlib.Path) -> Configuration:
         """ """
         import pytoml as toml
 
@@ -275,14 +275,14 @@ class Configuration(Generic[ConfigurationType]):
         try:
             return self.__storage__[item]
         except KeyError:
-            raise KeyError(f"´item´ is not defined in any configuration.")
+            raise KeyError(f"´{item}´ is not defined in any configuration.")
 
     def __getattr__(self, item: str) -> Any:
         """ """
         try:
             return self.__storage__[item]
         except KeyError:
-            raise AttributeError(f"´item´ is not defined in any configuration.")
+            raise AttributeError(f"´{item}´ is not defined in any configuration.")
 
     def __setitem__(self, key: str, value: Any) -> None:
         """ """
@@ -347,7 +347,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
         self.finalize()
 
     @staticmethod
-    def validate_settings(settings: Configuration):
+    def validate_settings(settings: Configuration) -> None:
         """
         :param settings:
         :return:
@@ -439,7 +439,8 @@ class FHIRSpec(Generic[FHIRSpecType]):
                 else:
                     LOGGER.warning(f"CodeSystem with no concepts: {resource['url']}")
         LOGGER.info(
-            f"Found {len(self.valuesets)} ValueSets and {len(self.codesystems)} CodeSystems"
+            f"Found {len(self.valuesets)} ValueSets and "
+            f"{len(self.codesystems)} CodeSystems"
         )
 
     def valueset_with_uri(self, uri: str) -> FHIRValueSet:
@@ -532,7 +533,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
         self._finalized = True
 
     @property
-    def finalized(self):
+    def finalized(self) -> bool:
         return self._finalized
 
     # MARK: Naming Utilities
@@ -662,7 +663,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
                 profiles.append(profile)
         return profiles
 
-    def write(self):
+    def write(self) -> None:
         """ """
         klass = self.settings.RESOURCES_WRITER_CLASS
         if isinstance(klass, str):
@@ -692,7 +693,7 @@ class FHIRSpecWriter(Generic[FHIRSpecWriterType]):
         self.spec = spec
         self.settings = spec.settings
 
-    def write(self):
+    def write(self) -> None:
         """ """
         raise NotImplementedError
 
@@ -815,7 +816,8 @@ class FHIRCodeSystem(Generic[FHIRCodeSystemType]):
         self.generate_enum = "complete" == resource["content"]
         if not self.generate_enum:
             LOGGER.debug(
-                f'Will not generate enum for CodeSystem "{self.url}" whose content is {resource["content"]}'
+                "Will not generate enum for CodeSystem "
+                f'"{self.url}" whose content is {resource["content"]}'
             )
             return
 
@@ -849,7 +851,7 @@ class FHIRCodeSystem(Generic[FHIRCodeSystemType]):
                 return found
 
             cd = c["code"]
-            name = (
+            name = (  # noqa: F841
                 "{}-{}".format(prefix, cd)
                 if prefix and not cd.startswith(prefix)
                 else cd
@@ -925,13 +927,14 @@ class FHIRStructureDefinition(Generic[FHIRStructureDefinitionType]):
         if struct is not None:
             mapped = {}
             for elem_dict in struct:
-                element: FHIRStructureDefinitionElement = FHIRStructureDefinitionElement(
+                element: FHIRStructureDefinitionElement = FHIRStructureDefinitionElement(  # noqa: E501
                     self, elem_dict, self.main_element is None
                 )
                 self.elements.append(element)
                 mapped[element.path] = element
 
-                # establish hierarchy (may move to extra loop in case elements are no longer in order)
+                # establish hierarchy (may move to extra
+                # loop in case elements are no longer in order)
                 if element.is_main_profile_element:
                     self.main_element = element
                 parent = mapped.get(element.parent_name)
@@ -960,7 +963,7 @@ class FHIRStructureDefinition(Generic[FHIRStructureDefinitionType]):
             snap_class, subs = self.main_element.create_class()
             if snap_class is None:
                 raise Exception(
-                    'The main element for "{}" did not create a class'.format(self.url)
+                    f'The main element for "{self.url}" did not create a class'
                 )
 
             self.found_class(snap_class)
@@ -1020,9 +1023,9 @@ class FHIRStructureDefinition(Generic[FHIRStructureDefinitionType]):
                     prop_cls = FHIRClass.with_name(prop_cls_name)
                     if prop_cls is None:
                         raise Exception(
-                            'There is no class "{}" for property "{}" on "{}" in {}'.format(
-                                prop_cls_name, prop.name, klass.name, self.name
-                            )
+                            f'There is no class "{prop_cls_name}"'
+                            f' for property "{prop.name}" on '
+                            f'"{klass.name}" in {self.name}'
                         )
                     else:
                         prop.module_name = prop_cls.module
@@ -1072,9 +1075,8 @@ class FHIRStructureDefinition(Generic[FHIRStructureDefinitionType]):
                 super_cls = FHIRClass.with_name(cls.superclass_name)
                 if super_cls is None and cls.superclass_name is not None:
                     raise Exception(
-                        'There is no class implementation for class named "{}" in profile "{}"'.format(
-                            cls.superclass_name, self.url
-                        )
+                        "There is no class implementation for class "
+                        f'named "{cls.superclass_name}" in profile "{self.url}"'
                     )
                 else:
                     cls.superclass = super_cls
@@ -1215,7 +1217,7 @@ class FHIRStructureDefinitionElement(Generic[FHIRStructureDefinitionElementType]
         if not self.represents_class:
             return None, None
 
-        class_name = self.name_if_class()
+        class_name = self.name_if_class()  # noqa: F841
         subs = []
         cls, did_create = FHIRClass.for_element(self)
         if did_create:
@@ -1255,7 +1257,8 @@ class FHIRStructureDefinitionElement(Generic[FHIRStructureDefinitionElementType]
         # TODO: handle slicing information (not sure why these properties were
         # omitted previously)
         # if self.definition.slicing:
-        #    logger.debug('Omitting property "{}" for slicing'.format(self.definition.prop_name))
+        #    logger.debug('Omitting property "{}"
+        #    for slicing'.format(self.definition.prop_name))
         #    return None
 
         # this must be a property
@@ -1282,7 +1285,8 @@ class FHIRStructureDefinitionElement(Generic[FHIRStructureDefinitionElementType]
                     props.append(FHIRClassProperty(self, type_obj, None))
             return props
 
-        # no `type` definition in the element: it's a property with an inline class definition
+        # no `type` definition in the element:
+        # it's a property with an inline class definition
         type_obj = FHIRElementType()
         return [FHIRClassProperty(self, type_obj, self.name_if_class())]
 
@@ -1343,7 +1347,7 @@ class FHIRStructureDefinitionElementDefinition(
         element: FHIRStructureDefinitionElement,
         definition_dict: Optional[Dict[str, Any]] = None,
     ):
-        self.id: str
+        self.id: Optional[str] = None
         self.element: FHIRStructureDefinitionElement = element
         self.types: List[FHIRElementType] = []
         self.name: Optional[str] = None
@@ -1399,13 +1403,15 @@ class FHIRStructureDefinitionElementDefinition(
         if self.content_reference is not None:
             if "#" != self.content_reference[:1]:
                 raise Exception(
-                    "Only relative 'contentReference' element definitions are supported right now"
+                    "Only relative 'contentReference' element"
+                    " definitions are supported right now"
                 )
             elem = self.element.profile.element_with_id(self.content_reference[1:])
             if elem is None:
                 raise Exception(
-                    f'There is no element definition with id "{self.content_reference}",'
-                    f" as referenced by {self.element.path} in {self.element.profile.url}"
+                    "There is no element definition with "
+                    f'id "{self.content_reference}", as referenced by '
+                    f"{self.element.path} in {self.element.profile.url}"
                 )
             self._content_referenced = elem.definition
 
@@ -1425,7 +1431,8 @@ class FHIRStructureDefinitionElementDefinition(
             if valueset is None:
                 LOGGER.error(
                     "There is no ValueSet for required binding "
-                    f'"{uri}" on {self.name or self.prop_name} in {self.element.profile.name}'
+                    f'"{uri}" on {self.name or self.prop_name} '
+                    f"in {self.element.profile.name}"
                 )
             else:
                 self.element.valueset = valueset
@@ -2026,7 +2033,7 @@ class FHIRUnitTest(Generic[FHIRUnitTestType]):
                     if list == type(val):
                         i = 0
                         for ival in val:
-                            idxpath = self.controller.settings.UNITTEST_FORMAT_PATH_INDEX.format(
+                            idxpath = self.controller.settings.UNITTEST_FORMAT_PATH_INDEX.format(  # noqa: E501
                                 path, i
                             )
                             item: FHIRUnitTestItem = FHIRUnitTestItem(
