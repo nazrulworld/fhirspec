@@ -23,7 +23,7 @@ def extract_archive(extract_location: pathlib.Path, archive_file: pathlib.Path):
 def ensure_static_files() -> typing.Dict[str, typing.List[pathlib.Path]]:
     """ """
     base_url = "https://github.com/nazrulworld/fhir-parser/raw/master/archives/HL7/FHIR"
-    files = ("definitions.json.zip", "examples-json.zip", "version.info")
+    files = ("definitions-json.zip", "examples-json.zip", "version.info")
     results: typing.Dict[str, typing.List[pathlib.Path]] = {}
     for item in (("R4", "4.0.1"), ("STU3", "3.0.2")):
         release, version = item
@@ -55,7 +55,8 @@ def settings():
         src_dir = src_container / release
         for file_ in releases[release]:
             if file_.suffix == ".zip":
-                extract_archive(src_dir / file_.name[6:-9], file_)
+                filename = file_.name[6:-9]
+                extract_archive(src_dir / filename, file_)
             elif file_.suffix == ".info":
                 shutil.copy(file_, (src_dir / "version.info"))
         sources.append(src_dir)

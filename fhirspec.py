@@ -305,6 +305,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
         :param src_directory:
         :param settings:
         """
+        self._finalized = False
         self.validate_settings(settings)
         self.definition_directory: pathlib.Path = getattr(
             settings, "FHIR_DEFINITION_DIRECTORY", None
@@ -326,7 +327,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
             self.definition_directory = src_directory / "definitions"
         if self.example_directory is None:
             assert src_directory
-            self.example_directory = src_directory / "examples_json"
+            self.example_directory = src_directory / "examples"
         if version_info_file is None:
             assert src_directory
             version_info_file = src_directory / "version.info"
@@ -436,7 +437,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
                 if "content" in resource and "concept" in resource:
                     self.codesystems[resource["url"]] = FHIRCodeSystem(self, resource)
                 else:
-                    LOGGER.warn(f"CodeSystem with no concepts: {resource['url']}")
+                    LOGGER.warning(f"CodeSystem with no concepts: {resource['url']}")
         LOGGER.info(
             f"Found {len(self.valuesets)} ValueSets and {len(self.codesystems)} CodeSystems"
         )
@@ -483,7 +484,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
                 assert isinstance(profile.url, str)
                 if re.search(pattern, profile.url) is not None:
                     LOGGER.info(f'Skipping "{resource["url"]}"')
-                    return
+                    continue
 
             if self.found_profile(profile):
                 profile.process_profile()
@@ -1790,9 +1791,14 @@ class FHIRResourceFile(Generic[FHIRResourceFileType]):
                     continue
                 if "resourceType" not in data:
                     continue
-                if data["resourceType"] == "StructureDefinition":
+                resource_type = data["resourceType"]
+                if resource_type == "StructureDefinition":
                     continue
-                if data["resourceType"] not in FHIRClass.known:  # type: ignore
+                if resource_type not in FHIRClass.known:  # type: ignore
+                    LOGGER.warning(
+                        f"class '{resource_type}' is not found"
+                        f" in ´´FHIRClass.known´´, ignored '{filepath}'."
+                    )
                     continue
 
             all_tests.append(cls(filepath=filepath))

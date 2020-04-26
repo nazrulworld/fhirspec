@@ -13,7 +13,7 @@ def test_configuration_from_module():
     assert config.BASE_PATH == baseconfig.BASE_PATH
 
 
-@pytest.mark.skipif(1 == 2, reason="Only runs in Travis Environment.")
+@pytest.mark.skipif(1 == 1, reason="Only runs in Travis Environment.")
 def test_download():
     """ """
     temp_dir = pathlib.Path(tempfile.mkdtemp())

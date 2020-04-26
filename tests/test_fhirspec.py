@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import fhirspec
 
+
 def test_fhirspec_init(settings):
     """"""
     config, sources = settings
-    fhirspec.FHIRSpec(config, sources[0])
+    spec = fhirspec.FHIRSpec(config, sources[0])
+    assert "Patient" in fhirspec.FHIRClass.known
+    assert "patient" in spec.profiles
