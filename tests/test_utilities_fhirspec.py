@@ -1,19 +1,25 @@
 # -*- coding: utf-8 -*-
-import fhirspec
-import tempfile
-import shutil
 import pathlib
+import shutil
+import tempfile
+import os
+
 import pytest
+
+import fhirspec
+
+IS_TRAVIS = "TRAVIS" in os.environ
 
 
 def test_configuration_from_module():
     """ """
     from . import baseconfig
+
     config = fhirspec.Configuration.from_module(baseconfig)
     assert config.BASE_PATH == baseconfig.BASE_PATH
 
 
-@pytest.mark.skipif(1 == 1, reason="Only runs in Travis Environment.")
+@pytest.mark.skipif(IS_TRAVIS is False, reason="Only runs in Travis Environment.")
 def test_download():
     """ """
     temp_dir = pathlib.Path(tempfile.mkdtemp())

@@ -1,5 +1,6 @@
 import os
 import pathlib
+
 """Variable Start Here """
 BASE_PATH = pathlib.Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE_PATH = "downloads"
@@ -235,10 +236,6 @@ MANUAL_PROFILES = [
         ["FHIRAbstractResource"],
     ),
     ("templates/fhirreference.py", "fhirreference", ["FHIRReference"]),
-    (
-        "templates/fhirdate.py",
-        "fhirdate",
-        ["date", "dateTime", "instant", "time"],
-    ),
+    ("templates/fhirdate.py", "fhirdate", ["date", "dateTime", "instant", "time"],),
     ("templates/fhirsearch.py", "fhirsearch", ["FHIRSearch"]),
 ]

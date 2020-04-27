@@ -40,7 +40,7 @@ from urllib.request import Request, urlopen
 
 __version__ = "0.1.0"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
-__all__ = ["Configuration", "FHIRSpec"]
+__all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
 
 # --*-- Enums
@@ -272,6 +272,17 @@ class Configuration(Generic[ConfigurationType]):
             if key.isupper():
                 storage[key] = val
 
+    def merge(self, other: Configuration) -> None:
+        """ """
+        storage = object.__getattribute__(self, "__storage__")
+        storage.update(object.__getattribute__(other, "__storage__").copy())
+
+    def __add__(self, other: Configuration) -> Configuration:
+        """ """
+        data_dict = object.__getattribute__(self, "__storage__").copy()
+        data_dict.update(object.__getattribute__(other, "__storage__").copy())
+        return Configuration(data_dict)
+
     def __getitem__(self, item: str) -> Any:
         """ """
         try:
@@ -366,6 +377,10 @@ class FHIRSpec(Generic[FHIRSpecType]):
             "ENUM_NAME_MAP",
             "DEFAULT_BASES",
             "MANUAL_PROFILES",
+            "CAMELCASE_CLASSES",
+            "CAMELCASE_ENUMS",
+            "BACKBONE_CLASS_ADDS_PARENT",
+            "RESOURCE_MODULE_LOWERCASE",
         ]
         write_resources = getattr(settings, "WRITE_RESOURCES", False)
         if write_resources is True:
@@ -383,9 +398,6 @@ class FHIRSpec(Generic[FHIRSpecType]):
                     "DEPENDENCIES_SOURCE_TEMPLATE",
                     "DEPENDENCIES_TARGET_FILE_NAME",
                     "RESOURCE_MODULE_LOWERCASE",
-                    "CAMELCASE_CLASSES",
-                    "CAMELCASE_ENUMS",
-                    "BACKBONE_CLASS_ADDS_PARENT",
                 ]
             )
         write_unittests = getattr(settings, "WRITE_UNITTESTS", False)
@@ -1886,7 +1898,7 @@ class FHIRUnitTestController(Generic[FHIRUnitTestControllerType]):
                 collections[test.klass.name] = coll
             coll.add_test(test)
 
-        self.collections = [v for k, v in collections.items()]
+        self.collections = [v for v in collections.values()]
 
     # MARK: Utilities
     def unittest_for_resource(

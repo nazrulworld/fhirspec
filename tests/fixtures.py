@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-import pytest
-import fhirspec
-from fhirspec import Configuration
-import zipfile
-import typing
+import os
+import pathlib
 import shutil
 import tempfile
+import typing
+import zipfile
 
-import pathlib
-import os
+import pytest
+
+import fhirspec
+from fhirspec import Configuration
 
 STATIC_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__))) / "static"
 DEFINITION_DIR = STATIC_DIR / "HL7" / "FHIR"
