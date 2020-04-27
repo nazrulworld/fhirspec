@@ -35,14 +35,14 @@ Documentation = "https://nazrul.me/fhirspec/"
 [tool.flit.metadata.requires-extra]
 test = [
     "pytest >=4.0.0",
-    "pytest-cov"
-]
-dev = [
+    "pytest-cov",
     "mypy",
     "black",
     "isort",
+    "flake8"
+]
+dev = [
     "autoflake",
-    "flake8",
     "vulture",
     "json5"
 ]
