@@ -4,6 +4,7 @@ build-backend = "flit.buildapi"
 
 [tool.flit.metadata]
 module = "fhirspec"
+dist-name = "fhirspec"
 author = "Md Nazrul Islam"
 author-email = "email2nazrul@gmail.com"
 home-page = "https://github.com/nazrulworld/fhirspec"
