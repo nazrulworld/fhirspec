@@ -353,6 +353,7 @@ class FHIRSpec(Generic[FHIRSpecType]):
         :return:
         """
         required_variables = [
+            "WRITE_RESOURCES",
             "CLASS_MAP",
             "REPLACE_MAP",
             "NATIVES",
@@ -361,38 +362,44 @@ class FHIRSpec(Generic[FHIRSpecType]):
             "RESERVED_MAP",
             "ENUM_MAP",
             "ENUM_NAME_MAP",
-            "FHIR_BASE_URL",
-            "CURRENT_RELEASE_NAME",
             "DEFAULT_BASES",
-            "PREVIOUS_RELEASES",
-            "SPECIFICATION_URL",
-            "UNITTEST_FORMAT_PATH_PREPARE",
-            "TEMPLATE_DIRECTORY",
-            "RESOURCE_FILE_NAME_PATTERN",
-            "WRITE_RESOURCES",
-            "RESOURCE_TARGET_DIRECTORY",
-            "RESOURCE_SOURCE_TEMPLATE",
-            "CODE_SYSTEMS_SOURCE_TEMPLATE",
-            "CODE_SYSTEMS_TARGET_NAME",
-            "WRITE_FACTORY",
-            "UNITTEST_COPY_FILES",
-            "FACTORY_SOURCE_TEMPLATE",
-            "FACTORY_TARGET_NAME",
-            "WRITE_DEPENDENCIES",
-            "DEPENDENCIES_SOURCE_TEMPLATE",
-            "DEPENDENCIES_TARGET_FILE_NAME",
-            "WRITE_UNITTESTS",
-            "UNITTEST_SOURCE_TEMPLATE",
-            "UNITTEST_TARGET_DIRECTORY",
-            "UNITTEST_TARGET_FILE_NAME_PATTERN",
-            "UNITTEST_FORMAT_PATH_KEY",
-            "UNITTEST_FORMAT_PATH_INDEX",
-            "RESOURCE_MODULE_LOWERCASE",
-            "CAMELCASE_CLASSES",
-            "CAMELCASE_ENUMS",
-            "BACKBONE_CLASS_ADDS_PARENT",
             "MANUAL_PROFILES",
         ]
+        write_resources = getattr(settings, "WRITE_RESOURCES", False)
+        if write_resources is True:
+            required_variables.extend(
+                [
+                    "TEMPLATE_DIRECTORY",
+                    "RESOURCE_FILE_NAME_PATTERN",
+                    "RESOURCE_TARGET_DIRECTORY",
+                    "RESOURCE_SOURCE_TEMPLATE",
+                    "CODE_SYSTEMS_SOURCE_TEMPLATE",
+                    "CODE_SYSTEMS_TARGET_NAME",
+                    "FACTORY_SOURCE_TEMPLATE",
+                    "FACTORY_TARGET_NAME",
+                    "WRITE_DEPENDENCIES",
+                    "DEPENDENCIES_SOURCE_TEMPLATE",
+                    "DEPENDENCIES_TARGET_FILE_NAME",
+                    "RESOURCE_MODULE_LOWERCASE",
+                    "CAMELCASE_CLASSES",
+                    "CAMELCASE_ENUMS",
+                    "BACKBONE_CLASS_ADDS_PARENT",
+                ]
+            )
+        write_unittests = getattr(settings, "WRITE_UNITTESTS", False)
+        if write_unittests is True:
+            required_variables.extend(
+                [
+                    "UNITTEST_COPY_FILES",
+                    "UNITTEST_FORMAT_PATH_PREPARE",
+                    "UNITTEST_SOURCE_TEMPLATE",
+                    "UNITTEST_TARGET_DIRECTORY",
+                    "UNITTEST_TARGET_FILE_NAME_PATTERN",
+                    "UNITTEST_FORMAT_PATH_KEY",
+                    "UNITTEST_FORMAT_PATH_INDEX",
+                ]
+            )
+
         settings.validate(required_variables)
 
         if (
@@ -427,7 +434,8 @@ class FHIRSpec(Generic[FHIRSpecType]):
 
     # MARK: Managing ValueSets and CodeSystems
     def read_valuesets(self) -> None:
-        resources = self.read_bundle_resources("valuesets.json")
+        filename = getattr(self.settings, "FHIR_VALUESETS_FILE_NAME", "valuesets.json")
+        resources = self.read_bundle_resources(filename)
         for resource in resources:
             if "ValueSet" == resource["resourceType"]:
                 assert "url" in resource
@@ -468,7 +476,12 @@ class FHIRSpec(Generic[FHIRSpecType]):
         """ Find all (JSON) profiles and instantiate into FHIRStructureDefinition.
         """
         resources = []
-        for filename in ["profiles-types.json", "profiles-resources.json"]:
+        files = getattr(
+            self.settings,
+            "FHIR_PROFILES_FILE_NAMES",
+            ["profiles-types.json", "profiles-resources.json"],
+        )
+        for filename in files:
             bundle_res = self.read_bundle_resources(filename)
             for resource in bundle_res:
                 if "StructureDefinition" == resource["resourceType"]:
