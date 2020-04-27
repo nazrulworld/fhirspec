@@ -218,6 +218,8 @@ class Configuration(Generic[ConfigurationType]):
             paths.extend(path_variables)
 
         for np in paths:
+            if np not in storage:
+                continue
             val = storage[np]
             if isinstance(val, list):
                 new_val = list()
