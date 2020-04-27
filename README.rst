@@ -36,7 +36,10 @@ on https://github.com/smart-on-fhir/fhir-parser.
 
 Usages
 ======
-Provides extremely easy to use api
+
+FHIRSpec::
+	>>> from fhirspec import FHIRSpec
+	>>> from fhirspec import Configuration
 
 
 History
