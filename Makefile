@@ -75,7 +75,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 
 
 release: dist ## package and upload a release
-	twine upload dist/*
+	flit publish --repository pypi
 
 dist: clean ## builds source and wheel package
 	python setup.py sdist
