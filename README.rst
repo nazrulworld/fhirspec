@@ -37,9 +37,65 @@ on https://github.com/smart-on-fhir/fhir-parser.
 Usages
 ======
 
-FHIRSpec::
-	>>> from fhirspec import FHIRSpec
-	>>> from fhirspec import Configuration
+``fhirspec.Configuration``
+--------------------------
+A class that is controlling the behavior of  ``fhirspec.FHIRSpec``, powerful but very convenient.
+In several ways it is possible to construct the instance, ie. from ``JSON`` file (has support for `json5 <https://json5.org/>`_),
+from python module, from ``TOML`` file, from plain text file, and so on.
+**Only capital letter's variables are accepted**
+
+
+>>> import pathlib
+>>> import os
+>>> from foo.module import bar
+>>> from fhirspec import Configuration
+>>> config1 = Configuration.from_module(bar)
+>>> config2 = Configuration.from_json_file(pathlib.Path("/json/file/location"))
+>>> data_dict = {
+... "BASE_URL": pathlib.Path(os.path.abspath(__file__))
+... }
+>>> config3 = Configuration(data_dict=data_dict)
+
+
+
+``fhirspec.FHIRSpec``
+---------------------
+
+The main loader class, to construct this instance, ``Configuration:`` is required parameter and additionally
+source of json files. Bellows variables should have to be present in configuration.
+
+
+	required_variables = [
+		"WRITE_RESOURCES", "CLASS_MAP", "REPLACE_MAP", "NATIVES",
+		"JSON_MAP", "JSON_MAP_DEFAULT", "RESERVED_MAP", "ENUM_MAP",
+		"ENUM_NAME_MAP", "DEFAULT_BASES", "MANUAL_PROFILES", "CAMELCASE_CLASSES",
+		"CAMELCASE_ENUMS", "BACKBONE_CLASS_ADDS_PARENT", "RESOURCE_MODULE_LOWERCASE",]
+
+
+>>> from fhirspec import Configuration
+>>> from fhirspec import FHIRSpec
+>>> config = Configuration(
+... {
+...   "BASE_PATH": "",
+      "WRITE_RESOURCES": True
+... }
+... )
+>>> spec = FHIRSpec(config)
+>>> "patient" in spec.profiles
+True
+
+
+``download``
+------------
+
+A perfect tool to download any file from server, no dependency on third-party library.
+
+>>> from fhirspec import download
+>>> url = "http://www.africau.edu/images/default/sample.pdf"
+>>> download_directory = pathlib.Path(os.path.expanduser("~/Downloads"))
+>>> download(url, download_directory)
+>>> (download_directory / "sample.pdf").exists()
+True
 
 
 History
@@ -51,8 +107,7 @@ History
 - Initial release [nazrulworld]
 
 
-Legal Notice
-============
+------------
 
 © Copyright HL7® logo, FHIR® logo and the flaming fire are registered trademarks
 owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks.cfm?ref=https://pypi.org/project/fhir-resources/>`_
