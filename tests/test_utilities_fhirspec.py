@@ -28,8 +28,8 @@ def test_download():
         "nazrulworld/fhir-parser/master/archives/"
         "HL7/FHIR/STU3/3.0.1-version.info"
     )
-    html_file = ""
-    json_file = ""
+    html_file = ""  # noqa: F841
+    json_file = ""  # noqa: F841
     zip_file = (
         "https://github.com/nazrulworld/fhir-parser/"
         "raw/master/archives/HL7/FHIR/STU3/3.0.2-examples-json.zip"

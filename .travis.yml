@@ -27,7 +27,7 @@ install:
 
 script:
   - make clean
-#  - make lint
+  - make lint
   - mypy fhirspec.py
   - isort -c fhirspec.py
   - black --check --verbose fhirspec.py
