@@ -101,7 +101,7 @@ True
 History
 =======
 
-0.1.0 (unreleased)
+0.1.0 (28-04-2020)
 ------------------
 
 - Initial release [nazrulworld]
