@@ -101,10 +101,10 @@ True
 History
 =======
 
-0.1.1 (unreleased)
+0.2.0 (unreleased)
 ------------------
 
-- no changes
+- Make supports for Python 3.6 and 3.9
 
 0.1.0 (28-04-2020)
 ------------------

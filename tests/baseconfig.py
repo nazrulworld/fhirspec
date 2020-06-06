@@ -10,31 +10,12 @@ CLASS_MAP = {
     # to avoid Practinioner.role and PractitionerRole generating the same class
     "Practitioner.role": "PractRole",
     "boolean": "bool",
-    "integer": "int",
-    "positiveInt": "int",
-    "unsignedInt": "int",
-    "date": "FHIRDate",
-    "dateTime": "FHIRDate",
-    "instant": "FHIRDate",
-    "time": "FHIRDate",
-    "decimal": "float",
-    "string": "str",
-    "markdown": "str",
-    "id": "str",
-    "code": "str",  # for now we're not generating enums for these
-    "uri": "str",
-    "url": "str",
-    "canonical": "str",
-    "oid": "str",
-    "uuid": "str",
-    "xhtml": "str",
-    "base64Binary": "str",
 }
 
 # replacemap
 # Classes to be replaced with different ones at resource rendering time
 REPLACE_MAP = {
-    "Reference": "FHIRReference"  # `FHIRReference` adds differencing capabilities
+
 }
 # natives
 # Which class names are native to the language (or can be treated this way)
@@ -116,18 +97,6 @@ CODE_SYSTEMS_SOURCE_TEMPLATE = None
 # value sets (in `RESOURCE_TARGET_DIRECTORY`)
 CODE_SYSTEMS_TARGET_NAME = "codesystems.py"
 
-# write_factory
-# Whether and where to put the factory methods and the dependency graph
-WRITE_FACTORY = True
-
-# tpl_factory_source
-# the template to use for factory generation
-FACTORY_SOURCE_TEMPLATE = "template-elementfactory.jinja2"
-
-# tpl_factory_target
-# where to write the generated factory to
-FACTORY_TARGET_NAME = "../tmp/fhir/resources/fhirelementfactory.py"
-
 # write_dependencies
 WRITE_DEPENDENCIES = False
 
@@ -180,11 +149,32 @@ UNITTEST_FORMAT_PATH_INDEX = "{}[{}]"
 # default_base
 DEFAULT_BASES = {
     # the class to use for "Element" types
-    "complex-type": "FHIRAbstractBase",
+    "complex-type": "FHIRAbstractModel",
     # the class to use for "Resource" types
-    "resource": "FHIRAbstractResource",
+    "resource": "FHIRResourceModel",
 }
-
+FHIR_PRIMITIVES = [
+    "boolean",
+    "string",
+    "base64Binary",
+    "code",
+    "id",
+    "decimal",
+    "integer",
+    "unsignedInt",
+    "positiveInt",
+    "uri",
+    "oid",
+    "uuid",
+    "canonical",
+    "url",
+    "markdown",
+    "xhtml",
+    "date",
+    "dateTime",
+    "instant",
+    "time",
+]
 # resource_modules_lowercase
 # whether all resource paths (i.e. modules)
 # should be lowercase
@@ -209,33 +199,10 @@ BACKBONE_CLASS_ADDS_PARENT = True
 # class names will still be recognized and it is assumed the class is present.
 MANUAL_PROFILES = [
     (
-        "templates/fhirabstractbase.py",
-        "fhirabstractbase",
-        [
-            "boolean",
-            "string",
-            "base64Binary",
-            "code",
-            "id",
-            "decimal",
-            "integer",
-            "unsignedInt",
-            "positiveInt",
-            "uri",
-            "oid",
-            "uuid",
-            "canonical",
-            "url",
-            "markdown",
-            "FHIRAbstractBase",
-        ],
+        "templates/fhirresourcemodel.py",
+        "fhirresourcemodel",
+        ["FHIRResourceModel"],
     ),
-    (
-        "templates/fhirabstractresource.py",
-        "fhirabstractresource",
-        ["FHIRAbstractResource"],
-    ),
-    ("templates/fhirreference.py", "fhirreference", ["FHIRReference"]),
-    ("templates/fhirdate.py", "fhirdate", ["date", "dateTime", "instant", "time"],),
-    ("templates/fhirsearch.py", "fhirsearch", ["FHIRSearch"]),
+    ("templates/fhirabstractmodel.py", "fhirabstractmodel", ["FHIRAbstractModel"]),
+    ("templates/fhirtypes.py", "fhirtypes", FHIR_PRIMITIVES),
 ]

@@ -4,30 +4,32 @@
   "CLASS_MAP": {
 	"Any": "Resource",
 	"Practitioner.role": "PractRole",
-	"boolean": "bool",
-	"integer": "int",
-	"positiveInt": "int",
-	"unsignedInt": "int",
-	"date": "FHIRDate",
-	"dateTime": "FHIRDate",
-	"instant": "FHIRDate",
-	"time": "FHIRDate",
-	"decimal": "float",
-	"string": "str",
-	"markdown": "str",
-	"id": "str",
-	"code": "str",
-	"uri": "str",
-	"url": "str",
-	"canonical": "str",
-	"oid": "str",
-	"uuid": "str",
-	"xhtml": "str",
-	"base64Binary": "str"
+	"boolean": "bool"
   },
   "REPLACE_MAP": {
-	"Reference": "FHIRReference"
   },
+  "FHIR_PRIMITIVES": [
+	"boolean",
+	"string",
+	"base64Binary",
+	"code",
+	"id",
+	"decimal",
+	"integer",
+	"unsignedInt",
+	"positiveInt",
+	"uri",
+	"oid",
+	"uuid",
+	"canonical",
+	"url",
+	"markdown",
+	"xhtml",
+	"date",
+	"dateTime",
+	"instant",
+	"time"
+  ],
   "NATIVES": [
 	"bool",
 	"int",
@@ -78,9 +80,6 @@
   "RESOURCE_SOURCE_TEMPLATE": "template-resource.jinja2",
   "CODE_SYSTEMS_SOURCE_TEMPLATE": null,
   "CODE_SYSTEMS_TARGET_NAME": "codesystems.py",
-  "WRITE_FACTORY": true,
-  "FACTORY_SOURCE_TEMPLATE": "template-elementfactory.jinja2",
-  "FACTORY_TARGET_NAME": "../tmp/fhir/resources/fhirelementfactory.py",
   "WRITE_DEPENDENCIES": false,
   "DEPENDENCIES_SOURCE_TEMPLATE": "template-dependencies.json",
   "DEPENDENCIES_TARGET_FILE_NAME": "./dependencies.json",
@@ -96,8 +95,8 @@
   "UNITTEST_FORMAT_PATH_KEY": "{}.{}",
   "UNITTEST_FORMAT_PATH_INDEX": "{}[{}]",
   "DEFAULT_BASES": {
-	"complex-type": "FHIRAbstractBase",
-	"resource": "FHIRAbstractResource"
+	"complex-type": "FHIRAbstractModel",
+	"resource": "FHIRResourceModel"
   },
   "RESOURCE_MODULE_LOWERCASE": true,
   "CAMELCASE_CLASSES": true,
@@ -105,8 +104,22 @@
   "BACKBONE_CLASS_ADDS_PARENT": true,
   "MANUAL_PROFILES": [
 	[
-	  "templates/fhirabstractbase.py",
-	  "fhirabstractbase",
+	  "templates/fhirresourcemodel.py",
+	  "fhirresourcemodel",
+	  [
+		"FHIRResourceModel"
+	  ]
+	],
+	[
+	  "templates/fhirabstractmodel.py",
+	  "fhirabstractmodel",
+	  [
+		"FHIRAbstractModel"
+	  ]
+	],
+	[
+	  "templates/fhirtypes.py",
+	  "fhirtypes",
 	  [
 		"boolean",
 		"string",
@@ -123,38 +136,11 @@
 		"canonical",
 		"url",
 		"markdown",
-		"FHIRAbstractBase"
-	  ]
-	],
-	[
-	  "templates/fhirabstractresource.py",
-	  "fhirabstractresource",
-	  [
-		"FHIRAbstractResource"
-	  ]
-	],
-	[
-	  "templates/fhirreference.py",
-	  "fhirreference",
-	  [
-		"FHIRReference"
-	  ]
-	],
-	[
-	  "templates/fhirdate.py",
-	  "fhirdate",
-	  [
+		"xhtml",
 		"date",
 		"dateTime",
 		"instant",
 		"time"
-	  ]
-	],
-	[
-	  "templates/fhirsearch.py",
-	  "fhirsearch",
-	  [
-		"FHIRSearch"
 	  ]
 	]
   ]

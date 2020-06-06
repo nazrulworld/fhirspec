@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import os
 import pathlib
 import shutil
 import tempfile
-import os
 
 import pytest
 
