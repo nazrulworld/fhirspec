@@ -101,7 +101,7 @@ True
 History
 =======
 
-0.2.0 (unreleased)
+0.2.0 (06-06-2020)
 ------------------
 
 - ``FHIRClass.known`` property has been changed to ``FHIRClass.__know_classes__`` and ``FHIRClass.is_known_class``.
