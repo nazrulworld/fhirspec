@@ -104,6 +104,8 @@ History
 0.2.0 (unreleased)
 ------------------
 
+- ``FHIRClass.known`` property has been changed to ``FHIRClass.__know_classes__`` and ``FHIRClass.is_known_class``.
+
 - Make supports for Python 3.6 and 3.9
 
 0.1.0 (28-04-2020)

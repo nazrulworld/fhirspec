@@ -21,7 +21,6 @@ jobs:
       env: python_version=3.9-dev
 
   allow_failures:
-    - python: 3.8
     - python: 3.9-dev
 
 cache:

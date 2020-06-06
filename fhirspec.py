@@ -1605,7 +1605,7 @@ class FHIRClass:
     """ An element/resource that should become its own class.
     """
 
-    known: DefaultDict[str, "FHIRClass"] = defaultdict()
+    __known_classes__: DefaultDict[str, "FHIRClass"] = defaultdict()
 
     @classmethod
     def for_element(
@@ -1616,19 +1616,24 @@ class FHIRClass:
         """
         assert element.represents_class
         class_name = element.name_if_class()
-        if class_name in cls.known:
-            return cls.known[class_name], False
+        if class_name in cls.__known_classes__:
+            return cls.__known_classes__[class_name], False
 
         klass = cls(element)
-        cls.known[class_name] = klass
+        cls.__known_classes__[class_name] = klass
         return klass, True
 
     @classmethod
     def with_name(cls, class_name: str) -> "FHIRClass":
         try:
-            return cls.known[class_name]
+            return cls.__known_classes__[class_name]
         except KeyError:
             raise NotImplementedError
+
+    @classmethod
+    def is_known_class(cls, name: str) -> bool:
+        """ """
+        return name in cls.__known_classes__
 
     def __init__(self, element: FHIRStructureDefinitionElement):
         """
@@ -1838,10 +1843,10 @@ class FHIRResourceFile:
                 resource_type = data["resourceType"]
                 if resource_type == "StructureDefinition":
                     continue
-                if resource_type not in FHIRClass.known:  # type: ignore
+                if not FHIRClass.is_known_class(resource_type):
                     LOGGER.warning(
                         f"class '{resource_type}' is not found"
-                        f" in ´´FHIRClass.known´´, ignored '{filepath}'."
+                        f" in ´´FHIRClass.__known_classes__´´, ignored '{filepath}'."
                     )
                     continue
 
@@ -1915,7 +1920,7 @@ class FHIRUnitTestController:
         self, resource: FHIRResourceFile
     ) -> Union["FHIRUnitTest", None]:
         """ Returns a FHIRUnitTest instance or None for the given resource,
-        depending on if the class to be tested is known.
+        depending on if the class to be tested is __known_classes__.
         """
         classname = resource.content.get("resourceType")
         assert classname
@@ -1988,21 +1993,16 @@ class FHIRUnitTestItem:
 
         # regular test case; skip string tests that are longer than 200 chars
         else:
-            isstr = isinstance(self.value, (str, bytes))
-
+            is_str = isinstance(self.value, (str, bytes))
             value = self.value
-            if isstr:
+            if is_str:
                 if len(value) > 200:
                     return tests
-                elif not hasattr(value, "isprintable"):  # Python 2.x doesn't have it
-                    try:
-                        value.decode("utf-8")
-                    except Exception:
-                        return tests
+
                 elif not value.isprintable():
                     return tests
 
-                value = self.value.replace("\n", "\\n")
+                self.value = value.replace("\n", "\\n")
             tests.append(self)
 
         return tests

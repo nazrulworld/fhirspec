@@ -6,5 +6,5 @@ def test_fhirspec_init(settings):
     """"""
     config, sources = settings
     spec = fhirspec.FHIRSpec(config, sources[0])
-    assert "Patient" in fhirspec.FHIRClass.known
+    assert "Patient" in fhirspec.FHIRClass.__known_classes__
     assert "patient" in spec.profiles
