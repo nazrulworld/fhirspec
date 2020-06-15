@@ -101,10 +101,10 @@ True
 History
 =======
 
-0.2.1 (unreleased)
+0.2.1 (15-06-2020)
 ------------------
 
-- no changes.
+- Minor improvement on ``FHIRUnitTest`` handling empty value.
 
 0.2.0 (06-06-2020)
 ------------------

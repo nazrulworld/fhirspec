@@ -2070,6 +2070,8 @@ class FHIRUnitTest:
                     if list == type(val):
                         i = 0
                         for ival in val:
+                            if ival is None:
+                                continue
                             idxpath = self.controller.settings.UNITTEST_FORMAT_PATH_INDEX.format(  # noqa: E501
                                 path, i
                             )
@@ -2081,6 +2083,8 @@ class FHIRUnitTest:
                             if i >= 10:  # let's assume we don't need 100s of unit tests
                                 break
                     else:
+                        if val is None:
+                            continue
                         item = FHIRUnitTestItem(
                             self.filepath, path, val, propclass, False, prop.enum
                         )
