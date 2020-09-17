@@ -302,8 +302,12 @@ class FHIRSpec:
         self.definition_directory: pathlib.Path = getattr(
             settings, "FHIR_DEFINITION_DIRECTORY", None
         )
-        self.example_directory: pathlib.Path = getattr(settings, "FHIR_EXAMPLE_DIRECTORY", None)
-        version_info_file: pathlib.Path = getattr(settings, "FHIR_VERSION_INFO_FILE", None)
+        self.example_directory: pathlib.Path = getattr(
+            settings, "FHIR_EXAMPLE_DIRECTORY", None
+        )
+        version_info_file: pathlib.Path = getattr(
+            settings, "FHIR_VERSION_INFO_FILE", None
+        )
         if (
             self.definition_directory is None
             or self.example_directory is None
@@ -410,7 +414,9 @@ class FHIRSpec:
         with open(str(filepath), encoding="utf-8") as handle:
             parsed = json.load(handle)
             if "resourceType" not in parsed:
-                raise Exception(f'Expecting "resourceType" to be present, but is not in {filepath}')
+                raise Exception(
+                    f'Expecting "resourceType" to be present, but is not in {filepath}'
+                )
             if "Bundle" != parsed["resourceType"]:
                 raise Exception('Can only process "Bundle" resources')
             if "entry" not in parsed:
@@ -433,7 +439,8 @@ class FHIRSpec:
                 else:
                     LOGGER.warning(f"CodeSystem with no concepts: {resource['url']}")
         LOGGER.info(
-            f"Found {len(self.valuesets)} ValueSets and " f"{len(self.codesystems)} CodeSystems"
+            f"Found {len(self.valuesets)} ValueSets and "
+            f"{len(self.codesystems)} CodeSystems"
         )
 
     def valueset_with_uri(self, uri: str) -> "FHIRValueSet":
@@ -472,7 +479,9 @@ class FHIRSpec:
                 if "StructureDefinition" == resource["resourceType"]:
                     resources.append(resource)
                 else:
-                    LOGGER.debug(f"Not handling resource of type {resource['resourceType']}")
+                    LOGGER.debug(
+                        f"Not handling resource of type {resource['resourceType']}"
+                    )
 
         # create profile instances
         for resource in resources:
@@ -542,9 +551,13 @@ class FHIRSpec:
     def as_module_name(self, name: str) -> str:
         if self.class_name_is_primitive(name):
             return "fhirtypes"
-        return name.lower() if name and self.settings.RESOURCE_MODULE_LOWERCASE else name
+        return (
+            name.lower() if name and self.settings.RESOURCE_MODULE_LOWERCASE else name
+        )
 
-    def as_class_name(self, classname: str, parent_name: str = None) -> Union[str, None]:
+    def as_class_name(
+        self, classname: str, parent_name: str = None
+    ) -> Union[str, None]:
         """
         :param classname:
         :param parent_name:
@@ -554,7 +567,11 @@ class FHIRSpec:
             return None
 
         # if we have a parent, do we have a mapped class?
-        pathname = "{0}.{1}".format(parent_name, classname) if parent_name is not None else None
+        pathname = (
+            "{0}.{1}".format(parent_name, classname)
+            if parent_name is not None
+            else None
+        )
         if pathname is not None and pathname in self.settings.CLASS_MAP:
             return self.settings.CLASS_MAP[pathname]
 
@@ -567,7 +584,9 @@ class FHIRSpec:
             return classname[:1].upper() + classname[1:]
         return classname
 
-    def class_name_for_type(self, type_name: str, parent_name: str = None) -> Union[str, None]:
+    def class_name_for_type(
+        self, type_name: str, parent_name: str = None
+    ) -> Union[str, None]:
         """
         :param type_name:
         :param parent_name:
@@ -691,7 +710,9 @@ class FHIRSpecWriter:
     def __init__(self, spec: FHIRSpec):
         """ """
         if spec.finalized is not True:
-            raise ValueError("Specification must be in finalized state, ready to write.")
+            raise ValueError(
+                "Specification must be in finalized state, ready to write."
+            )
         self.spec = spec
         self.settings = spec.settings
 
@@ -762,7 +783,8 @@ class FHIRValueSet:
         include = compose.get("include")
         if 1 != len(include):
             LOGGER.warning(
-                "Ignoring ValueSet with more than " f"1 includes ({len(include)}: {include})"
+                "Ignoring ValueSet with more than "
+                f"1 includes ({len(include)}: {include})"
             )
             return None
 
@@ -853,7 +875,9 @@ class FHIRCodeSystem:
 
             cd = c["code"]
             name = (  # noqa: F841
-                "{}-{}".format(prefix, cd) if prefix and not cd.startswith(prefix) else cd
+                "{}-{}".format(prefix, cd)
+                if prefix and not cd.startswith(prefix)
+                else cd
             )
             c["name"] = self.spec.safe_enum_name(cd)
             c["definition"] = c.get("definition") or c["name"]
@@ -953,14 +977,18 @@ class FHIRStructureDefinition:
                         and element.parent.is_summary
                         and not element.is_summary
                     ):
-                        LOGGER.error("n_min > 0 but not summary: `{}`".format(element.path))
+                        LOGGER.error(
+                            "n_min > 0 but not summary: `{}`".format(element.path)
+                        )
                         element.summary_n_min_conflict = True
 
         # create classes and class properties
         if self.main_element is not None:
             snap_class, subs = self.main_element.create_class()
             if snap_class is None:
-                raise Exception(f'The main element for "{self.url}" did not create a class')
+                raise Exception(
+                    f'The main element for "{self.url}" did not create a class'
+                )
 
             self.found_class(snap_class)
             if subs is not None:
@@ -968,7 +996,9 @@ class FHIRStructureDefinition:
                     self.found_class(sub)
             self.targetname = snap_class.name
 
-    def element_with_id(self, ident: str) -> Union["FHIRStructureDefinitionElement", None]:
+    def element_with_id(
+        self, ident: str
+    ) -> Union["FHIRStructureDefinitionElement", None]:
         """ Returns a FHIRStructureDefinitionElementDefinition with the given
         id, if found. Used to retrieve elements defined via `contentReference`.
         """
@@ -998,7 +1028,11 @@ class FHIRStructureDefinition:
         for klass in self.classes:
             # are there superclasses that we need to import?
             sup_cls = klass.superclass
-            if sup_cls is not None and sup_cls.name not in internal and sup_cls.name not in needed:
+            if (
+                sup_cls is not None
+                and sup_cls.name not in internal
+                and sup_cls.name not in needed
+            ):
                 needed.add(sup_cls.name)
                 needs.append(sup_cls)
 
@@ -1006,8 +1040,9 @@ class FHIRStructureDefinition:
             for prop in klass.properties:
                 prop_cls_name = prop.class_name
                 assert isinstance(prop_cls_name, str)
-                if prop_cls_name not in internal and not self.spec.class_name_is_native(
-                    prop_cls_name
+                if (
+                    prop_cls_name not in internal
+                    and not self.spec.class_name_is_native(prop_cls_name)
                 ):
                     prop_cls = FHIRClass.with_name(prop_cls_name)
                     if prop_cls is None:
@@ -1243,7 +1278,9 @@ class FHIRStructureDefinitionElement:
 
         # this must be a property
         if self.parent is None:
-            raise Exception(f'Element reports as property but has no parent: "{self.path}"')
+            raise Exception(
+                f'Element reports as property but has no parent: "{self.path}"'
+            )
 
         # create a list of FHIRClassProperty instances (usually with only 1 item)
         if len(self.definition.types) > 0:
@@ -1254,7 +1291,9 @@ class FHIRStructureDefinitionElement:
                 if (
                     "BackboneElement" == type_obj.code or "Element" == type_obj.code
                 ):  # data types don't use "BackboneElement"
-                    props.append(FHIRClassProperty(self, type_obj, self.name_if_class()))
+                    props.append(
+                        FHIRClassProperty(self, type_obj, self.name_if_class())
+                    )
                     # TODO: look at http://hl7.org/fhir/
                     # StructureDefinition/structuredefinition-explicit-type-name ?
                 else:
@@ -1290,11 +1329,15 @@ class FHIRStructureDefinitionElement:
             tps = self.definition.types
             if len(tps) > 1:
                 raise Exception(
-                    "Have more than one type to determine superclass " f'in "{self.path}": "{tps}"'
+                    "Have more than one type to determine superclass "
+                    f'in "{self.path}": "{tps}"'
                 )
             type_code: Optional[str] = None
 
-            if self.is_main_profile_element and self.profile.structure.subclass_of is not None:
+            if (
+                self.is_main_profile_element
+                and self.profile.structure.subclass_of is not None
+            ):
                 type_code = self.profile.structure.subclass_of
             elif len(tps) > 0:
                 type_code = tps[0].code
@@ -1323,7 +1366,9 @@ class FHIRStructureDefinitionElementDefinition:
         self.name: Optional[str] = None
         self.prop_name: Optional[str] = None
         self.content_reference: Optional[str] = None
-        self._content_referenced: Optional[FHIRStructureDefinitionElementDefinition] = None
+        self._content_referenced: Optional[
+            FHIRStructureDefinitionElementDefinition
+        ] = None
         self.short: Optional[str] = None
         self.formal: Optional[str] = None
         self.comment: Optional[str] = None
@@ -1349,7 +1394,9 @@ class FHIRStructureDefinitionElementDefinition:
 
         self.short = definition_dict.get("short")
         self.formal = definition_dict.get("definition")
-        if self.formal and self.short == self.formal[:-1]:  # formal adds a trailing period
+        if (
+            self.formal and self.short == self.formal[:-1]
+        ):  # formal adds a trailing period
             self.formal = None
         self.comment = definition_dict.get("comments")
 
@@ -1414,9 +1461,13 @@ class FHIRStructureDefinitionElementDefinition:
         with_name = self.name or self.prop_name
         assert isinstance(with_name, str)
         parent_name = (
-            self.element.parent.name_if_class() if self.element.parent is not None else None
+            self.element.parent.name_if_class()
+            if self.element.parent is not None
+            else None
         )
-        classname = self.element.profile.spec.class_name_for_type(with_name, parent_name)
+        classname = self.element.profile.spec.class_name_for_type(
+            with_name, parent_name
+        )
         if (
             parent_name is not None
             and classname
@@ -1476,7 +1527,9 @@ class FHIRElementType:
         if not isinstance(profile, list):
             raise Exception(
                 "Expecting a list for 'targetProfile' "
-                "definition of an element type, got {0} as {1}".format(profile, type(profile))
+                "definition of an element type, got {0} as {1}".format(
+                    profile, type(profile)
+                )
             )
         return profile
 
@@ -1546,7 +1599,9 @@ class FHIRClass:
     __known_classes__: DefaultDict[str, "FHIRClass"] = defaultdict()
 
     @classmethod
-    def for_element(cls, element: FHIRStructureDefinitionElement) -> Tuple["FHIRClass", bool]:
+    def for_element(
+        cls, element: FHIRStructureDefinitionElement
+    ) -> Tuple["FHIRClass", bool]:
         """ Returns an existing class or creates one for the given element.
         Returns a tuple with the class and a bool indicating creation.
         """
@@ -1715,7 +1770,9 @@ class FHIRClassProperty:
         assert isinstance(name, str)
         if "[x]" in name:
             self.one_of_many = name.replace("[x]", "")
-            name = name.replace("[x]", "{0}{1}".format(type_name[:1].upper(), type_name[1:]))
+            name = name.replace(
+                "[x]", "{0}{1}".format(type_name[:1].upper(), type_name[1:])
+            )
         self.orig_name: str = name
         self.name: str = spec.safe_property_name(name)
         self.parent_name: Optional[str] = element.parent_name
@@ -1725,7 +1782,9 @@ class FHIRClassProperty:
         self.module_name: Optional[str] = None
         assert isinstance(self.class_name, str)
         self.json_class: str = spec.json_class_for_class_name(self.class_name)
-        self.is_native: bool = (False if self.enum else spec.class_name_is_native(self.class_name))
+        self.is_native: bool = (
+            False if self.enum else spec.class_name_is_native(self.class_name)
+        )
         self.is_array: bool = True if "*" == element.n_max else False
         self.is_summary: bool = element.is_summary
         self.is_summary_n_min_conflict: bool = element.summary_n_min_conflict
@@ -1743,7 +1802,9 @@ class FHIRClassProperty:
         if element.definition:
             self.short: Optional[str] = element.definition.short
             self.formal: Optional[str] = element.definition.formal
-            self.representation: Optional[Sequence[str]] = element.definition.representation
+            self.representation: Optional[
+                Sequence[str]
+            ] = element.definition.representation
 
         self.field_type = self.class_name
         self.field_type_module = self.module_name
@@ -1846,7 +1907,9 @@ class FHIRUnitTestController:
         self.collections = [v for v in collections.values()]
 
     # MARK: Utilities
-    def unittest_for_resource(self, resource: FHIRResourceFile) -> Union["FHIRUnitTest", None]:
+    def unittest_for_resource(
+        self, resource: FHIRResourceFile
+    ) -> Union["FHIRUnitTest", None]:
         """ Returns a FHIRUnitTest instance or None for the given resource,
         depending on if the class to be tested is __known_classes__.
         """
@@ -1856,7 +1919,9 @@ class FHIRUnitTestController:
             classname = self.settings.CLASS_MAP[classname]
         klass = FHIRClass.with_name(classname)
         if klass is None:
-            LOGGER.error(f'There is no class for "{classname}", cannot create unit tests')
+            LOGGER.error(
+                f'There is no class for "{classname}", cannot create unit tests'
+            )
             return None
 
         return FHIRUnitTest(self, resource.filepath, resource.content, klass)
@@ -1895,7 +1960,9 @@ class FHIRUnitTestItem:
         self.array_item = array_item
         self.enum = enum_item["name"] if enum_item is not None else None
 
-    def create_tests(self, controller: FHIRUnitTestController) -> List["FHIRUnitTestItem"]:
+    def create_tests(
+        self, controller: FHIRUnitTestController
+    ) -> List["FHIRUnitTestItem"]:
         """ Creates as many FHIRUnitTestItem instances as the item defines, or
         just returns a list containing itself if this property is not an
         element.
@@ -1979,7 +2046,11 @@ class FHIRUnitTest:
                 assert prop.class_name
                 propclass = FHIRClass.with_name(prop.class_name)
                 if propclass is None:
-                    path = "{}.{}".format(self.prefix, prop.name) if self.prefix else prop.name
+                    path = (
+                        "{}.{}".format(self.prefix, prop.name)
+                        if self.prefix
+                        else prop.name
+                    )
                     LOGGER.error(
                         f'There is no class "{prop.class_name}" '
                         f'for property "{path}" in {self.filepath}'
@@ -2115,7 +2186,9 @@ def filename_from_response(response: HTTPResponse) -> str:
     return _from_url(response.geturl())
 
 
-def write_response_stream(output_dir: pathlib.Path, response: HTTPResponse) -> pathlib.Path:
+def write_response_stream(
+    output_dir: pathlib.Path, response: HTTPResponse
+) -> pathlib.Path:
     """ """
     filename = filename_from_response(response)
     output = output_dir / filename
