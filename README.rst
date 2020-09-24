@@ -101,7 +101,7 @@ True
 History
 =======
 
-0.2.2 (unreleased)
+0.2.2 (24-09-2020)
 ------------------
 
 - use ``FHIRStructureDefinitionElement.is_main_profile_element`` instead of ``FHIRStructureDefinitionElement.represents_class``
