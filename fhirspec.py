@@ -34,7 +34,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
@@ -1173,7 +1173,6 @@ class FHIRStructureDefinitionElement:
         # to a ValueSet that is a CodeSystem generating an enum
         self.enum: Optional[Dict[str, Any]] = None
         self.is_main_profile_element: bool = is_main_profile_element
-        self.represents_class: bool = False
 
         self._superclass_name: Optional[str] = None
         self._did_resolve_dependencies: bool = False
@@ -1204,14 +1203,6 @@ class FHIRStructureDefinitionElement:
         self.is_summary = element_dict.get("isSummary", False)
 
     def resolve_dependencies(self) -> None:
-        if self.is_main_profile_element:
-            self.represents_class = True
-        if (
-            not self.represents_class
-            and self.children is not None
-            and len(self.children) > 0
-        ):
-            self.represents_class = True
         if self.definition is not None:
             self.definition.resolve_dependencies()
 
@@ -1238,7 +1229,7 @@ class FHIRStructureDefinitionElement:
         second item in the tuple.
         """
         assert self._did_resolve_dependencies
-        if not self.represents_class:
+        if not self.is_main_profile_element:
             return None, None
 
         class_name = self.name_if_class()  # noqa: F841
@@ -1614,7 +1605,7 @@ class FHIRClass:
         """ Returns an existing class or creates one for the given element.
         Returns a tuple with the class and a bool indicating creation.
         """
-        assert element.represents_class
+        assert element.is_main_profile_element
         class_name = element.name_if_class()
         if class_name in cls.__known_classes__:
             return cls.__known_classes__[class_name], False
@@ -1639,7 +1630,7 @@ class FHIRClass:
         """
         :param element: FHIRStructureDefinitionElement
         """
-        assert element.represents_class
+        assert element.is_main_profile_element
         self.path: Optional[str] = element.path
         self.name: str = element.name_if_class()
         self.module: Optional[str] = None
