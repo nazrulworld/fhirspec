@@ -104,7 +104,7 @@ History
 0.2.5 (unreleased)
 ------------------
 
-- No changes.
+- This release contains full fixes of ``FHIRStructureDefinitionElement.represents_class`` issues.
 
 
 0.2.4 (02-11-2020)
