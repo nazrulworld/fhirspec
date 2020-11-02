@@ -34,7 +34,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
