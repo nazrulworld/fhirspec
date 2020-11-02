@@ -101,6 +101,19 @@ True
 History
 =======
 
+0.2.4 (02-11-2020)
+------------------
+
+- No more improvements, just same release of  ``0.2.1`` and overrides to the faulty release of ``0.2.3``.
+
+
+0.2.3 (24-09-2020)
+------------------
+
+**Update to version ``0.2.4`` is recommended**
+
+- use ``FHIRStructureDefinitionElement.is_main_profile_element`` instead of ``FHIRStructureDefinitionElement.represents_class``
+
 0.2.1 (15-06-2020)
 ------------------
 

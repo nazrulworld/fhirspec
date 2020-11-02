@@ -37,8 +37,8 @@ Documentation = "https://nazrul.me/fhirspec/"
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest >=4.0.0",
-    "pytest-cov",
+    "pytest==6.1.2",
+    "pytest-cov==2.10.1",
     "mypy",
     "black",
     "isort",
@@ -53,8 +53,8 @@ toml = [
 	"pytoml"
 ]
 all = [
-	"pytest >=4.0.0",
-    "pytest-cov",
+	"pytest==6.1.2",
+    "pytest-cov==2.10.1",
     "mypy",
     "black",
     "isort",

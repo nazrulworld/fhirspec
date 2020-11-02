@@ -45,7 +45,7 @@ def ensure_static_files() -> typing.Dict[str, typing.List[pathlib.Path]]:
     return results
 
 
-@pytest.fixture("session")
+@pytest.fixture(scope="session")
 def settings():
     """ """
     src_container = pathlib.Path(tempfile.mkdtemp())
