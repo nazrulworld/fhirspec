@@ -101,7 +101,7 @@ True
 History
 =======
 
-0.2.5 (unreleased)
+0.2.5 (02-11-2020)
 ------------------
 
 - This release contains full fixes of ``FHIRStructureDefinitionElement.represents_class`` issues.
