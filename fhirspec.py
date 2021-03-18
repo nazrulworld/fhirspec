@@ -34,7 +34,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
@@ -531,8 +531,13 @@ class FHIRSpec:
         """
         if self._finalized is True:
             raise ValueError("Specification is already been finalized!")
+
+        # self.profiles['meta'].structure.snapshot[-1]
         for key, prof in self.profiles.items():
             prof.finalize()
+            if len(prof.elements_sequences) == 0:
+                for item in prof.structure.snapshot[1:]:
+                    prof.elements_sequences.append(item["id"].split(".")[1])
 
         if self.settings.WRITE_UNITTESTS:
             self.parse_unit_tests()
@@ -901,6 +906,7 @@ class FHIRStructureDefinition:
         self._did_finalize: bool = False
         self.fhir_version: Optional[str] = None
         self.fhir_last_updated: Optional[str] = None
+        self.elements_sequences: List[str] = list()
 
         if profile is not None:
             self.parse_profile(profile)
@@ -1230,29 +1236,31 @@ class FHIRStructureDefinitionElement:
         class_name = self.name_if_class()  # noqa: F841
         subs = []
         cls, did_create = FHIRClass.for_element(self)
+        children = self.children or []
         if did_create:
             LOGGER.debug(f'Created class "{cls.name}"')
             if module is None and self.is_main_profile_element:
                 module = self.profile.spec.as_module_name(cls.name)
             cls.module = module
+            for child in children:
+                cls.add_property_in_sequence(child)
 
         # child classes
-        if self.children is not None:
-            for child in self.children:
-                properties = child.as_properties()
-                if properties is not None:
+        for child in children:
+            properties = child.as_properties()
+            if properties is not None:
 
-                    # collect subclasses
-                    sub, subsubs = child.create_class(module)
-                    if sub is not None:
-                        subs.append(sub)
-                    if subsubs is not None:
-                        subs.extend(subsubs)
+                # collect subclasses
+                sub, subsubs = child.create_class(module)
+                if sub is not None:
+                    subs.append(sub)
+                if subsubs is not None:
+                    subs.extend(subsubs)
 
-                    # add properties to class
-                    if did_create:
-                        for prop in properties:
-                            cls.add_property(prop)
+                # add properties to class
+                if did_create:
+                    for prop in properties:
+                        cls.add_property(prop)
 
         return cls, subs
 
@@ -1628,6 +1636,7 @@ class FHIRClass:
         self.short: Optional[str] = None
         self.formal: Optional[str] = None
         self.properties: List[FHIRClassProperty] = list()
+        self.properties_sequence: List[str] = list()
         self.expanded_nonoptionals: Dict[str, List[FHIRClassProperty]] = dict()
         self.class_type = FHIR_CLASS_TYPES.other
         if element.definition:
@@ -1674,6 +1683,34 @@ class FHIRClass:
                 self.expanded_nonoptionals[prop.one_of_many].append(prop)
             else:
                 self.expanded_nonoptionals[prop.one_of_many] = [prop]
+
+    def add_property_in_sequence(self, element: FHIRStructureDefinitionElement) -> None:
+        """ """
+        if element.definition is None:
+            return
+        prop = element.definition.prop_name
+        if prop is None:
+            raise NotImplementedError
+        if prop.endswith("[x]"):
+            for typ in element.definition.types:
+                self.properties_sequence.append(
+                    prop.replace("[x]", typ.code[0].upper() + typ.code[1:])
+                )
+        else:
+            self.properties_sequence.append(prop)
+
+    @property
+    def expanded_properties_sequence(self) -> List[str]:
+        my_properties = self.properties_sequence
+        superclass = self.superclass
+        while True:
+            if superclass is None:
+                break
+            props = superclass.properties_sequence
+            superclass = superclass.superclass
+            if props:
+                my_properties = props + my_properties
+        return my_properties
 
     @property
     def nonexpanded_properties(self) -> List["FHIRClassProperty"]:

@@ -100,6 +100,12 @@ True
 
 History
 =======
+0.3.0 (18-03-2021)
+------------------
+
+- Now each ``FHIRClass`` contains original sequence of it's properties(elements) defined in specification.
+- Additionally ``FHIRClass.expanded_properties_sequence`` returns all available properties (combined with parent) sequentially.
+
 
 0.2.5 (02-11-2020)
 ------------------
