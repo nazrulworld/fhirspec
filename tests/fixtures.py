@@ -23,10 +23,10 @@ def extract_archive(extract_location: pathlib.Path, archive_file: pathlib.Path):
 
 def ensure_static_files() -> typing.Dict[str, typing.List[pathlib.Path]]:
     """ """
-    base_url = "https://github.com/nazrulworld/fhir-parser/raw/master/archives/HL7/FHIR"
+    base_url = "https://github.com/nazrulworld/hl7-archives/raw/0.3.2/FHIR"
     files = ("definitions-json.zip", "examples-json.zip", "version.info")
     results: typing.Dict[str, typing.List[pathlib.Path]] = {}
-    for item in (("R4", "4.0.1"), ("STU3", "3.0.2")):
+    for item in (("R4B", "4.3.0"), ("R4", "4.0.1"), ("STU3", "3.0.2")):
         release, version = item
         directory = DEFINITION_DIR / release / version
         if not directory.exists():

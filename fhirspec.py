@@ -34,7 +34,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
@@ -45,6 +45,7 @@ class FHIR_RELEASES(str, enum.Enum):
 
     R5 = "R5"
     R4 = "R4"
+    R4B = "R4B"
     STU3 = "STU3"
 
 
@@ -66,6 +67,7 @@ FHIR_VERSIONS_MAP = {
     "3.0.2": FHIR_RELEASES.STU3,
     "4.0.0": FHIR_RELEASES.R4,
     "4.0.1": FHIR_RELEASES.R4,
+    "4.3.0": FHIR_RELEASES.R4B,
 }
 HTTP_URL = re.compile(r"^https?://", re.IGNORECASE)
 UNSUPPORTED_PROFILES = [r"SimpleQuantity"]

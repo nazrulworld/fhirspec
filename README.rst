@@ -2,23 +2,23 @@
 FHIR Specification Parser
 =========================
 
-.. image:: https://img.shields.io/travis/nazrulworld/fhirspec.svg
-        :target: https://travis-ci.org/nazrulworld/fhirspec
+.. image:: https://img.shields.io/pypi/v/fhirspec.svg
+        :target: https://pypi.org/project/fhirspec/
+
+.. image:: https://img.shields.io/pypi/pyversions/fhirspec.svg
+        :target: https://pypi.org/project/fhirspec/
+        :alt: Supported Python Versions
+
+.. image:: https://img.shields.io/travis/com/nazrulworld/fhirspec.svg
+        :target: https://app.travis-ci.com/github/nazrulworld/fhirspec
 
 .. image:: https://codecov.io/gh/nazrulworld/fhirspec/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/nazrulworld/fhirspec/branch/master
    :alt: Test Coverage
 
-.. image:: https://img.shields.io/pypi/pyversions/fhirspec.svg
-   :target: https://pypi.python.org/pypi/fhirspec/
-   :alt: Python Versions
-
 .. image:: https://img.shields.io/lgtm/grade/python/g/nazrulworld/fhirspec.svg?logo=lgtm&logoWidth=18
     :target: https://lgtm.com/projects/g/nazrulworld/fhirspec/context:python
     :alt: Language grade: Python
-
-.. image:: https://img.shields.io/pypi/v/fhirspec.svg
-   :target: https://pypi.org/project/fhirspec/
 
 .. image:: https://img.shields.io/pypi/l/fhirpath.svg
    :target: https://pypi.org/project/fhirspec/
@@ -100,6 +100,12 @@ True
 
 History
 =======
+
+0.4.0 (22-12-2022)
+------------------
+
+- FHIR R4B specification support has been added.
+
 0.3.0 (18-03-2021)
 ------------------
 
