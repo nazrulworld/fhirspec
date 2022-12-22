@@ -17,14 +17,11 @@ jobs:
       env: python_version=3.8
 
     - name: Python 3.9
-      python: 3.9
-      env: python_version=3.9
+      python: 3.9-dev
+      env: python_version=3.9-dev
 
-    - name: Python nightly
-        python: nightly
-        env: python_version=nightly
   allow_failures:
-    - python: nightly
+    - python: 3.9-dev
 
 cache:
   directories:
