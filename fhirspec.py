@@ -14,6 +14,7 @@ import os
 import pathlib
 import re
 import types
+import typing
 from ast import literal_eval
 from collections import defaultdict
 from http.client import HTTPResponse
@@ -89,7 +90,9 @@ class Configuration:
     __storage__: DefaultDict[str, Any]
     __slots__ = ("__storage__", "_initialized")
 
-    def __init__(self, data_dict: Dict[str, Any], path_variables: List[str] = None):
+    def __init__(
+        self, data_dict: Dict[str, Any], path_variables: Optional[List[str]] = None
+    ):
         """ """
         object.__setattr__(self, "__storage__", defaultdict())
         object.__setattr__(self, "_initialized", False)
@@ -176,7 +179,7 @@ class Configuration:
 
         _add(data_dict.items())
 
-    def normalize_paths(self, path_variables: List[str] = None) -> None:
+    def normalize_paths(self, path_variables: Optional[List[str]] = None) -> None:
         """ """
         init_ = object.__getattribute__(self, "_initialized")
         if init_ is False:
@@ -292,21 +295,23 @@ class FHIRSpec:
 
     _finalized: bool
 
-    def __init__(self, settings: Configuration, src_directory: pathlib.Path = None):
+    def __init__(
+        self, settings: Configuration, src_directory: Optional[pathlib.Path] = None
+    ):
         """
         :param src_directory:
         :param settings:
         """
         self._finalized = False
         self.validate_settings(settings)
-        self.definition_directory: pathlib.Path = getattr(
-            settings, "FHIR_DEFINITION_DIRECTORY", None
+        self.definition_directory: pathlib.Path = typing.cast(
+            pathlib.Path, getattr(settings, "FHIR_DEFINITION_DIRECTORY", None)
         )
-        self.example_directory: pathlib.Path = getattr(
-            settings, "FHIR_EXAMPLE_DIRECTORY", None
+        self.example_directory: pathlib.Path = typing.cast(
+            pathlib.Path, getattr(settings, "FHIR_EXAMPLE_DIRECTORY", None)
         )
-        version_info_file: pathlib.Path = getattr(
-            settings, "FHIR_VERSION_INFO_FILE", None
+        version_info_file: pathlib.Path = typing.cast(
+            pathlib.Path, getattr(settings, "FHIR_VERSION_INFO_FILE", None)
         )
         if (
             self.definition_directory is None
@@ -558,7 +563,7 @@ class FHIRSpec:
         )
 
     def as_class_name(
-        self, classname: str, parent_name: str = None
+        self, classname: str, parent_name: Optional[str] = None
     ) -> Union[str, None]:
         """
         :param classname:
@@ -587,7 +592,7 @@ class FHIRSpec:
         return classname
 
     def class_name_for_type(
-        self, type_name: str, parent_name: str = None
+        self, type_name: str, parent_name: Optional[str] = None
     ) -> Union[str, None]:
         """
         :param type_name:
@@ -739,7 +744,7 @@ class FHIRVersionInfo:
         self.read_version(info_file)
 
     def read_version(self, filepath: pathlib.Path) -> None:
-        assert filepath.is_file
+        assert filepath.is_file()
         with open(str(filepath), "r", encoding="utf-8") as handle:
             text = handle.read()
             for line in text.split("\n"):
@@ -1225,7 +1230,7 @@ class FHIRStructureDefinitionElement:
             self.children.append(element)
 
     def create_class(
-        self, module: str = None
+        self, module: Optional[str] = None
     ) -> Tuple[Union["FHIRClass", None], Union[None, Sequence["FHIRClass"]]]:
         """Creates a FHIRClass instance from the receiver, returning the
         created class as the first and all inline defined subclasses as the
@@ -1483,7 +1488,7 @@ class FHIRStructureDefinitionElementDefinition:
 class FHIRElementType:
     """Representing a type of an element."""
 
-    def __init__(self, type_dict: Dict[str, Any] = None):
+    def __init__(self, type_dict: Optional[Dict[str, Any]] = None):
         self.code: str
         self.profile: Union[None, List[str]] = None
 
@@ -1780,7 +1785,7 @@ class FHIRClassProperty:
         self,
         element: FHIRStructureDefinitionElement,
         type_obj: FHIRElementType,
-        type_name: str = None,
+        type_name: Optional[str] = None,
     ):
         assert element and type_obj
         # and must be instances of FHIRStructureDefinitionElement and FHIRElementType
@@ -1896,7 +1901,7 @@ class FHIRResourceFile:
 class FHIRUnitTestController:
     """Can create unit tests from example files."""
 
-    def __init__(self, spec: FHIRSpec, settings: Configuration = None):
+    def __init__(self, spec: FHIRSpec, settings: Optional[Configuration] = None):
         """
         :param spec:
         :param settings:
@@ -1972,7 +1977,7 @@ class FHIRUnitTestItem:
         value: Any,
         klass: FHIRClass,
         array_item: bool,
-        enum_item: Dict[str, Any] = None,
+        enum_item: Optional[Dict[str, Any]] = None,
     ):
         assert path
         assert value is not None
@@ -2037,7 +2042,7 @@ class FHIRUnitTest:
         filepath: pathlib.Path,
         content: Dict[str, Any],
         klass: FHIRClass,
-        prefix: str = None,
+        prefix: Optional[str] = None,
     ):
         assert content and klass
         self.controller: FHIRUnitTestController = controller
@@ -2131,7 +2136,9 @@ class FHIRUnitTestCollection:
 
 
 # --*-- Functions
-def resolve_path(string_path: str, parent: pathlib.Path = None) -> pathlib.Path:
+def resolve_path(
+    string_path: str, parent: Optional[pathlib.Path] = None
+) -> pathlib.Path:
     """ """
     if os.path.isabs(string_path):
         return pathlib.Path(string_path)

@@ -27,7 +27,7 @@ FHIR Specification Parser
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
-.. image:: https://fire.ly/wp-content/themes/fhir/images/fhir.svg
+.. image:: https://www.hl7.org/fhir/assets/images/fhir-logo-www.png
         :target: https://www.hl7.org/fhir/
         :alt: HL7® FHIR®
 
