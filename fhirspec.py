@@ -446,7 +446,7 @@ class FHIRSpec:
             f"{len(self.codesystems)} CodeSystems"
         )
 
-    def valueset_with_uri(self, uri: str) -> "FHIRValueSet":
+    def valueset_with_uri(self, uri: str) -> Optional["FHIRValueSet"]:
         """
         :param uri:
         :return: FHIRValueSetType
@@ -454,9 +454,11 @@ class FHIRSpec:
         try:
             return self.valuesets[uri]
         except KeyError:
-            raise NotImplementedError
+            # raise NotImplementedError
+            LOGGER.warning(f"NotImplementedError could not find valuesets for {uri}")
+            return None
 
-    def codesystem_with_uri(self, uri: str) -> "FHIRCodeSystem":
+    def codesystem_with_uri(self, uri: str) -> Optional["FHIRCodeSystem"]:
         """
         :param uri:
         :return: FHIRCodeSystem
@@ -464,7 +466,9 @@ class FHIRSpec:
         try:
             return self.codesystems[uri]
         except KeyError:
-            raise NotImplementedError
+            # raise NotImplementedError
+            LOGGER.warning(f"NotImplementedError could not find codesystem for {uri}")
+            return None
 
     # MARK: Handling Profiles
     def read_profiles(self) -> None:
@@ -786,7 +790,7 @@ class FHIRValueSet:
         include = compose.get("include")
         if 1 != len(include):
             LOGGER.warning(
-                "Ignoring ValueSet with more than "
+                f"Ignoring ValueSet ({self.definition['url']}) with more than "
                 f"1 includes ({len(include)}: {include})"
             )
             return None
@@ -797,7 +801,7 @@ class FHIRValueSet:
 
         # alright, this is a ValueSet with 1 include and
         # a system, is there a CodeSystem?
-        cs: FHIRCodeSystem = self.spec.codesystem_with_uri(system)
+        cs: Optional[FHIRCodeSystem] = self.spec.codesystem_with_uri(system)
         if cs is None or not cs.generate_enum:
             return None
 
@@ -1447,7 +1451,9 @@ class FHIRStructureDefinitionElementDefinition:
                 LOGGER.debug(f'Ignoring foreign ValueSet "{uri}"')
                 return
 
-            valueset: FHIRValueSet = self.element.profile.spec.valueset_with_uri(uri)
+            valueset: Optional[
+                FHIRValueSet
+            ] = self.element.profile.spec.valueset_with_uri(uri)
             if valueset is None:
                 LOGGER.error(
                     "There is no ValueSet for required binding "
@@ -1577,9 +1583,13 @@ class FHIRElementBinding:
     def __init__(self, binding_obj: Dict[str, Any]):
         self.strength: Optional[str] = binding_obj.get("strength")
         self.description: Optional[str] = binding_obj.get("description")
-        self.uri: Optional[str] = binding_obj.get("valueSetUri")
+        self.uri: Optional[str] = binding_obj.get("valueSet")
+        self.version: Optional[str] = None
         self.canonical: Optional[str] = binding_obj.get("valueSetCanonical")
         self.is_required: bool = "required" == self.strength
+        if self.uri:
+            if "|" in self.uri:
+                self.uri, self.version = self.uri.split("|")
 
 
 class FHIRElementConstraint:
