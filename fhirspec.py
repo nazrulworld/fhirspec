@@ -1848,6 +1848,7 @@ class FHIRClassProperty:
             self.representation: Optional[
                 Sequence[str]
             ] = element.definition.representation
+            self.binding: Optional[FHIRElementBinding] = element.definition.binding
 
         self.field_type = self.class_name
         self.field_type_module = self.module_name
