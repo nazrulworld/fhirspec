@@ -31,3 +31,19 @@ def assert_binding_uri(spec):
         == "http://hl7.org/fhir/ValueSet/address-type"
     )
     assert structure_def.definition.binding.version, "Should be set."
+
+    # also check that it was included in the FHIRClassProperty
+    property_ = next(
+        iter(
+            [
+                p_
+                for p_ in spec.profiles["address"].classes[0].properties
+                if p_.path == "Address.type"
+            ]
+        ),
+        None,
+    )
+    assert property_, "Expected to find a property for Address.type"
+    assert property_.binding, "Expected binding to be set"
+    assert property_.binding.uri == "http://hl7.org/fhir/ValueSet/address-type"
+    assert property_.binding.version, "Should be set."
