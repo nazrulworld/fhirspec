@@ -1,35 +1,58 @@
 # Config file for automatic testing at travis-ci.org
-os: linux
-dist: xenial
 language: python
 jobs:
   include:
-    - name: Python 3.6
+    - name: Python 3.6 on Linux (dist:xenial)"
+      os: linux
+      dist: xenial
+      language: python
       python: 3.6
       env: python_version=3.6
 
-    - name: Python 3.7
+    - name: "Python 3.7 on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
       python: 3.7
       env: python_version=3.7
 
-    - name: Python 3.8
+    - name: "Python 3.8 on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
       python: 3.8
       env: python_version=3.8
 
-    - name: Python 3.9
+    - name: "Python 3.9 on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
       python: 3.9
       env: python_version=3.9
 
-    - name: Python 3.10
+    - name: "Python 3.10 on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
       python: 3.10
       env: python_version=3.10
 
-    - name: Python 3.11
+    - name: "Python 3.11 on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
       python: 3.11
       env: python_version=3.11
 
+    - name: "Python 3.12-dev on Linux (dist:jammy)"
+      os: linux
+      dist: jammy
+      language: python
+      python: 3.12-dev
+      env: python_version=3.12-dev
+
   allow_failures:
-    - python: 3.11
+    - python: 3.12-dev
 
 cache:
   directories:
@@ -37,6 +60,7 @@ cache:
 
 install:
   - pip install -U pip
+  - pip install flit
   - pip install .[test]
   - pip install codecov
   - sleep 1

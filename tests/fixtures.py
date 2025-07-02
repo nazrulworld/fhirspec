@@ -63,5 +63,5 @@ def settings():
         sources.append(src_dir)
 
     yield config, sources
-    # do teardown
+    # do tear down
     shutil.rmtree(src_container)

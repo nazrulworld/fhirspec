@@ -14,9 +14,7 @@ CLASS_MAP = {
 
 # replacemap
 # Classes to be replaced with different ones at resource rendering time
-REPLACE_MAP = {
-
-}
+REPLACE_MAP = {}
 # natives
 # Which class names are native to the language (or can be treated this way)
 NATIVES = ["bool", "int", "float", "str", "dict"]

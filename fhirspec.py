@@ -1725,7 +1725,6 @@ class FHIRClass:
         if element.is_summary:
             self.summary_properties_sequences.append(prop_name_)
 
-
     @property
     def expanded_properties_sequence(self) -> List[str]:
         my_properties = self.properties_sequence
