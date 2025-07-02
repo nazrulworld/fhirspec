@@ -26,7 +26,11 @@ classifiers = [
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9"
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 requires = ["setuptools"]
 description-file = "README.rst"
@@ -37,8 +41,8 @@ Documentation = "https://nazrul.me/fhirspec/"
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest==6.1.2",
-    "pytest-cov==2.10.1",
+    "pytest",
+    "pytest-cov",
     "mypy",
     "black",
     "isort",
@@ -53,8 +57,8 @@ toml = [
 	"pytoml"
 ]
 all = [
-	"pytest==6.1.2",
-    "pytest-cov==2.10.1",
+	"pytest",
+    "pytest-cov",
     "mypy",
     "black",
     "isort",

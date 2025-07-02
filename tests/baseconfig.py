@@ -7,7 +7,7 @@ CACHE_PATH = "downloads"
 # classmap
 CLASS_MAP = {
     "Any": "Resource",
-    # to avoid Practinioner.role and PractitionerRole generating the same class
+    # to avoid Practitioner.role and PractitionerRole generating the same class
     "Practitioner.role": "PractRole",
     "boolean": "bool",
 }
@@ -85,11 +85,11 @@ RESOURCE_TARGET_DIRECTORY = "../fhir/resources"
 RESOURCE_FILE_NAME_PATTERN = "{}.py"
 
 # tpl_resource_source
-# the template to use as source when writing resource implementations for profiles
+# the template to use as a source when writing resource implementations for profiles
 RESOURCE_SOURCE_TEMPLATE = "template-resource.jinja2"
 
 # tpl_codesystems_source
-# the template to use as source when writing enums for CodeSystems; can be `None`
+# the template to use as a source when writing enums for CodeSystems; can be `None`
 CODE_SYSTEMS_SOURCE_TEMPLATE = None
 
 # tpl_codesystems_target_name
@@ -127,7 +127,7 @@ UNITTEST_TARGET_FILE_NAME_PATTERN = "test_{}.py"
 
 # unittest_copyfiles
 # array of file names to copy to the test directory
-# `UNITTEST_TARGET_DIRECTORY` (e.g. unit test base classes)
+# `UNITTEST_TARGET_DIRECTORY` (e.g., unit test base classes)
 UNITTEST_COPY_FILES = ["templates/conftest.py", "templates/fixtures.py"]
 
 # unittest_format_path_prepare
@@ -195,8 +195,8 @@ BACKBONE_CLASS_ADDS_PARENT = True
 # manual_profiles
 # All these files should be copied to `RESOURCE_TARGET_DIRECTORY`:
 # tuples of (path/to/file, module, array-of-class-names)
-# If the path is None, no file will be copied but the
-# class names will still be recognized and it is assumed the class is present.
+# If the path is None, no file will be copied, but the
+# class names will still be recognized, and it is assumed the class is present.
 MANUAL_PROFILES = [
     (
         "templates/fhirresourcemodel.py",

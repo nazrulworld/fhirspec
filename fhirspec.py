@@ -35,8 +35,9 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.4.0"
-__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
+__version__ = "0.5.0"
+__author__ = "Md Nazrul Islam"
+__email__ = "email2nazrul@gmail.com"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 
 
@@ -44,6 +45,7 @@ __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
 class FHIR_RELEASES(str, enum.Enum):
     """ """
 
+    R6 = "R6"
     R5 = "R5"
     R4 = "R4"
     R4B = "R4B"
@@ -69,6 +71,8 @@ FHIR_VERSIONS_MAP = {
     "4.0.0": FHIR_RELEASES.R4,
     "4.0.1": FHIR_RELEASES.R4,
     "4.3.0": FHIR_RELEASES.R4B,
+    "5.0.0": FHIR_RELEASES.R5,
+    "6.0.0": FHIR_RELEASES.R6,
 }
 HTTP_URL = re.compile(r"^https?://", re.IGNORECASE)
 UNSUPPORTED_PROFILES = [r"SimpleQuantity"]
@@ -630,7 +634,7 @@ class FHIRSpec:
                     classnames.append(cls_name)
 
             return classnames
-        # may be the full Profile URI,
+        # maybe the full Profile URI,
         # like http://hl7.org/fhir/Profile/MyProfile
         if isinstance(profile_name, str):
             type_name = profile_name.split("/")[-1]
@@ -800,7 +804,7 @@ class FHIRValueSet:
             return None
 
         # alright, this is a ValueSet with 1 include and
-        # a system, is there a CodeSystem?
+        # a system; is there a CodeSystem?
         cs: Optional[FHIRCodeSystem] = self.spec.codesystem_with_uri(system)
         if cs is None or not cs.generate_enum:
             return None
@@ -1237,7 +1241,7 @@ class FHIRStructureDefinitionElement:
         self, module: Optional[str] = None
     ) -> Tuple[Union["FHIRClass", None], Union[None, Sequence["FHIRClass"]]]:
         """Creates a FHIRClass instance from the receiver, returning the
-        created class as the first and all inline defined subclasses as the
+        created class as the first, and all inline-defined subclasses as the
         second item in the tuple.
         """
         assert self._did_resolve_dependencies
@@ -1268,7 +1272,7 @@ class FHIRStructureDefinitionElement:
                 if subsubs is not None:
                     subs.extend(subsubs)
 
-                # add properties to class
+                # add properties to a class
                 if did_create:
                     for prop in properties:
                         cls.add_property(prop)
@@ -1378,9 +1382,9 @@ class FHIRStructureDefinitionElementDefinition:
         self.name: Optional[str] = None
         self.prop_name: Optional[str] = None
         self.content_reference: Optional[str] = None
-        self._content_referenced: Optional[
-            FHIRStructureDefinitionElementDefinition
-        ] = None
+        self._content_referenced: Optional[FHIRStructureDefinitionElementDefinition] = (
+            None
+        )
         self.short: Optional[str] = None
         self.formal: Optional[str] = None
         self.comment: Optional[str] = None
@@ -1423,7 +1427,7 @@ class FHIRStructureDefinitionElementDefinition:
         self.representation = definition_dict.get("representation")
 
     def resolve_dependencies(self) -> None:
-        # update the definition from a reference, if there is one
+        # update the definition from a reference if there is one
         if self.content_reference is not None:
             if "#" != self.content_reference[:1]:
                 raise Exception(
@@ -1451,9 +1455,9 @@ class FHIRStructureDefinitionElementDefinition:
                 LOGGER.debug(f'Ignoring foreign ValueSet "{uri}"')
                 return
 
-            valueset: Optional[
-                FHIRValueSet
-            ] = self.element.profile.spec.valueset_with_uri(uri)
+            valueset: Optional[FHIRValueSet] = (
+                self.element.profile.spec.valueset_with_uri(uri)
+            )
             if valueset is None:
                 LOGGER.error(
                     "There is no ValueSet for required binding "
@@ -1654,6 +1658,7 @@ class FHIRClass:
         self.formal: Optional[str] = None
         self.properties: List[FHIRClassProperty] = list()
         self.properties_sequence: List[str] = list()
+        self.summary_properties_sequences: List[str] = list()
         self.expanded_nonoptionals: Dict[str, List[FHIRClassProperty]] = dict()
         self.class_type = FHIR_CLASS_TYPES.other
         if element.definition:
@@ -1678,7 +1683,7 @@ class FHIRClass:
         assert isinstance(prop, FHIRClassProperty)
 
         # do we already have a property with this name?
-        # if we do and it's a specific reference, make it a reference to a
+        # if we do, and it's a specific reference, make it a reference to a
         # generic resource
         for existing in self.properties:
             if existing.name == prop.name:
@@ -1708,13 +1713,18 @@ class FHIRClass:
         prop = element.definition.prop_name
         if prop is None:
             raise NotImplementedError
+        prop_name_ = None
         if prop.endswith("[x]"):
             for typ in element.definition.types:
-                self.properties_sequence.append(
-                    prop.replace("[x]", typ.code[0].upper() + typ.code[1:])
-                )
+                prop_name_ = prop.replace("[x]", typ.code[0].upper() + typ.code[1:])
+                break
         else:
-            self.properties_sequence.append(prop)
+            prop_name_ = prop
+        assert prop_name_ is not None
+        self.properties_sequence.append(prop_name_)
+        if element.is_summary:
+            self.summary_properties_sequences.append(prop_name_)
+
 
     @property
     def expanded_properties_sequence(self) -> List[str]:
@@ -1724,6 +1734,19 @@ class FHIRClass:
             if superclass is None:
                 break
             props = superclass.properties_sequence
+            superclass = superclass.superclass
+            if props:
+                my_properties = props + my_properties
+        return my_properties
+
+    @property
+    def expanded_summary_properties_sequence(self) -> List[str]:
+        my_properties = self.summary_properties_sequences
+        superclass = self.superclass
+        while True:
+            if superclass is None:
+                break
+            props = superclass.summary_properties_sequences
             superclass = superclass.superclass
             if props:
                 my_properties = props + my_properties
@@ -1845,9 +1868,9 @@ class FHIRClassProperty:
         if element.definition:
             self.short: Optional[str] = element.definition.short
             self.formal: Optional[str] = element.definition.formal
-            self.representation: Optional[
-                Sequence[str]
-            ] = element.definition.representation
+            self.representation: Optional[Sequence[str]] = (
+                element.definition.representation
+            )
 
         self.field_type = self.class_name
         self.field_type_module = self.module_name
@@ -1893,7 +1916,7 @@ class FHIRResourceFile:
     @property
     def content(self) -> Dict[str, Any]:
         """Process the unit test file, determining class structure
-        from the given classes dict.
+        from the given classes' dict.
 
         :returns: A tuple with (top-class-name, [test-dictionaries])
         """
