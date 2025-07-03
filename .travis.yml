@@ -61,8 +61,8 @@ cache:
 install:
   - pip install -U pip
   - pip install flit
-  - pip install .[test]
   - pip install codecov
+  - flit install --extras test
   - sleep 1
 
 script:

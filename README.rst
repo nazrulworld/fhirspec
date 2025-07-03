@@ -16,11 +16,7 @@ FHIR Specification Parser
    :target: https://codecov.io/gh/nazrulworld/fhirspec/branch/master
    :alt: Test Coverage
 
-.. image:: https://img.shields.io/lgtm/grade/python/g/nazrulworld/fhirspec.svg?logo=lgtm&logoWidth=18
-    :target: https://lgtm.com/projects/g/nazrulworld/fhirspec/context:python
-    :alt: Language grade: Python
-
-.. image:: https://img.shields.io/pypi/l/fhirpath.svg
+.. image:: https://img.shields.io/pypi/l/fhirspec.svg
    :target: https://pypi.org/project/fhirspec/
    :alt: License
 

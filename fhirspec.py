@@ -958,7 +958,6 @@ class FHIRStructureDefinition:
         if struct is not None:
             mapped = {}
             for elem_dict in struct:
-
                 element: FHIRStructureDefinitionElement = (
                     FHIRStructureDefinitionElement(  # noqa: E501
                         self, elem_dict, self.main_element is None
@@ -1264,7 +1263,6 @@ class FHIRStructureDefinitionElement:
         for child in children:
             properties = child.as_properties()
             if properties is not None:
-
                 # collect subclasses
                 sub, subsubs = child.create_class(module)
                 if sub is not None:
@@ -1304,7 +1302,6 @@ class FHIRStructureDefinitionElement:
         if len(self.definition.types) > 0:
             props: List[FHIRClassProperty] = []
             for type_obj in self.definition.types:
-
                 # an inline class
                 if (
                     "BackboneElement" == type_obj.code or "Element" == type_obj.code
@@ -1382,9 +1379,9 @@ class FHIRStructureDefinitionElementDefinition:
         self.name: Optional[str] = None
         self.prop_name: Optional[str] = None
         self.content_reference: Optional[str] = None
-        self._content_referenced: Optional[FHIRStructureDefinitionElementDefinition] = (
-            None
-        )
+        self._content_referenced: Optional[
+            FHIRStructureDefinitionElementDefinition
+        ] = None
         self.short: Optional[str] = None
         self.formal: Optional[str] = None
         self.comment: Optional[str] = None
@@ -1455,9 +1452,9 @@ class FHIRStructureDefinitionElementDefinition:
                 LOGGER.debug(f'Ignoring foreign ValueSet "{uri}"')
                 return
 
-            valueset: Optional[FHIRValueSet] = (
-                self.element.profile.spec.valueset_with_uri(uri)
-            )
+            valueset: Optional[
+                FHIRValueSet
+            ] = self.element.profile.spec.valueset_with_uri(uri)
             if valueset is None:
                 LOGGER.error(
                     "There is no ValueSet for required binding "
@@ -1522,7 +1519,6 @@ class FHIRElementType:
             extensions = type_dict.get("extension", [])
 
         if len(extensions) > 0:
-
             extensions_ = [e for e in extensions if e.get("url") in urls]
             if len(extensions_) == 1:
                 return extensions_[0]
@@ -1867,9 +1863,9 @@ class FHIRClassProperty:
         if element.definition:
             self.short: Optional[str] = element.definition.short
             self.formal: Optional[str] = element.definition.formal
-            self.representation: Optional[Sequence[str]] = (
-                element.definition.representation
-            )
+            self.representation: Optional[
+                Sequence[str]
+            ] = element.definition.representation
 
         self.field_type = self.class_name
         self.field_type_module = self.module_name
