@@ -96,6 +96,13 @@ True
 
 History
 =======
+0.5.0 (03-07-2025)
+------------------
+
+- Added support for ``summary`` mode.
+
+- FHIR R5 specification support has been added.
+
 
 0.4.0 (22-12-2022)
 ------------------
