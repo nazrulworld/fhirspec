@@ -2109,7 +2109,7 @@ class FHIRUnitTest:
                     )
                     LOGGER.error(
                         f'There is no class "{prop.class_name}" '
-                        f'for property "{path}" in {self.filepath}' # noqa: E501
+                        f'for property "{path}" in {self.filepath}'  # noqa: E501
                     )
                 else:
                     path = self.controller.make_path(self.prefix, prop.name)
