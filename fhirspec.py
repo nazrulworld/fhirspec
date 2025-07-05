@@ -35,7 +35,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __author__ = "Md Nazrul Islam"
 __email__ = "email2nazrul@gmail.com"
 __all__ = ["Configuration", "FHIRSpec", "download", "filename_from_response"]
@@ -1707,19 +1707,20 @@ class FHIRClass:
         if element.definition is None:
             return
         prop = element.definition.prop_name
+
         if prop is None:
             raise NotImplementedError
-        prop_name_ = None
+
         if prop.endswith("[x]"):
             for typ in element.definition.types:
                 prop_name_ = prop.replace("[x]", typ.code[0].upper() + typ.code[1:])
-                break
+                self.properties_sequence.append(prop_name_)
+                if element.is_summary:
+                    self.summary_properties_sequences.append(prop_name_)
         else:
-            prop_name_ = prop
-        assert prop_name_ is not None
-        self.properties_sequence.append(prop_name_)
-        if element.is_summary:
-            self.summary_properties_sequences.append(prop_name_)
+            self.properties_sequence.append(prop)
+            if element.is_summary:
+                self.summary_properties_sequences.append(prop)
 
     @property
     def expanded_properties_sequence(self) -> List[str]:

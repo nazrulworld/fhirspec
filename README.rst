@@ -96,6 +96,14 @@ True
 
 History
 =======
+
+0.6.0 (03-07-2025)
+------------------
+
+Fixes
+
+- Important business logic has been fixes for adding in property sequence, when property name ends with ´[x]´. (This problem was introduced in version ´0.5.0´)
+
 0.5.0 (03-07-2025)
 ------------------
 
